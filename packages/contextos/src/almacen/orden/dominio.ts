@@ -282,6 +282,7 @@ export const metaNuevoEnvioAgencia: MetaModelo<NuevoEnvioAgencia> = {
         fechaRecogida: { tipo: "fecha", requerido: true },
         observaciones: { requerido: false },
         posicionEtiqueta: { requerido: false },
+        crearRecogida: { tipo: "checkbox", requerido: false },
         // Lo que Eneboo exige del destinatario antes de llamar a la agencia (validateFormCEX).
         destNombre: { requerido: true },
         destNif: { requerido: false },
@@ -299,7 +300,9 @@ export const metaNuevoEnvioAgencia: MetaModelo<NuevoEnvioAgencia> = {
     },
     onChange: (envio, campo) =>
         // Los servicios y las posiciones dependen de la agencia: al cambiarla, se eligen de nuevo.
-        campo === "agenciaId" ? { ...envio, servicio: "", posicionEtiqueta: POSICION_ETIQUETA_PRIMERA } : envio,
+        campo === "agenciaId"
+            ? { ...envio, servicio: "", posicionEtiqueta: POSICION_ETIQUETA_PRIMERA, crearRecogida: false }
+            : envio,
 };
 
 /** Por defecto la etiqueta empieza en el primer hueco de la hoja. */
@@ -343,6 +346,10 @@ export const conDatosAlbaran = (envio: NuevoEnvioAgencia, datos: DatosEnvioAlbar
     kilos: datos.kilos ?? envio.kilos,
 });
 
+/** El servicio que se propone al elegir la agencia: el suyo por defecto o, si no tiene, el primero. */
+export const servicioPorDefecto = (agencia: AgenciaEnvio | undefined | null): string =>
+    agencia?.servicioPorDefecto ?? agencia?.servicios[0]?.codigo ?? "";
+
 export const nuevoEnvioAgenciaInicial = (
     orden: OrdenAlmacen,
     agencias: AgenciaEnvio[],
@@ -352,12 +359,13 @@ export const nuevoEnvioAgenciaInicial = (
     return {
         albaranId: pendientes.length === 1 ? pendientes[0].id : "",
         agenciaId: agencia?.codigo ?? "",
-        servicio: agencia?.servicios[0]?.codigo ?? "",
+        servicio: servicioPorDefecto(agencia),
         bultos: 1,
         kilos: 1,
         fechaRecogida: new Date(),
         observaciones: "",
         posicionEtiqueta: POSICION_ETIQUETA_PRIMERA,
+        crearRecogida: false,
         ...camposDestinatario(destinatarioVacio()),
     };
 };

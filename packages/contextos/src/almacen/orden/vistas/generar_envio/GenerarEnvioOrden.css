@@ -5,11 +5,11 @@
  * Grid de 12 columnas (quimera-formulario) en cada bloque:
  *   Envío (común a todas las agencias):
  *                 albarán (6) + agencia (6)
- *                 servicio (6) + fecha recogida (6)
- *                 bultos (6) + kilos (6)
+ *                 servicio (6) + bultos (3) + kilos (3)
+ *                 fecha recogida (6) + crear recogida (6, si la agencia lo permite: CEX)
  *                 observaciones (12)
  *   <Agencia> (solo si la agencia tiene campos propios, debajo de Envío):
- *                 posición 1ª etiqueta (6)            — CEX
+ *                 posición 1ª etiqueta (6)                         — CEX
  *   Destinatario: nombre (8) + NIF (4)
  *                 tipo vía (3) + dirección (6) + número (3)
  *                 otros (4) + CP (3) + ciudad (5)
@@ -51,9 +51,18 @@
     quimera-select[nombre="agenciaId"],
     quimera-select[nombre="servicio"],
     quimera-input[nombre="fechaRecogida"],
+    quimera-checkbox[nombre="crearRecogida"] {
+        grid-column: span 6;
+    }
+
     quimera-input[nombre="bultos"],
     quimera-input[nombre="kilos"] {
-        grid-column: span 6;
+        grid-column: span 3;
+    }
+
+    /* Al pie de la fila, a la altura del campo de fecha. */
+    quimera-checkbox[nombre="crearRecogida"] {
+        align-self: end;
     }
 
     quimera-input[nombre="observaciones"] {

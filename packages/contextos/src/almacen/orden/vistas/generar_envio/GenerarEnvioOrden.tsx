@@ -1,5 +1,5 @@
 import { QBoton } from "@olula/componentes/atomos/qboton.tsx";
-import { QInput, QModal, QSelect } from "@olula/componentes/index.js";
+import { QCheckbox, QInput, QModal, QSelect } from "@olula/componentes/index.js";
 import { ContextoError } from "@olula/lib/contexto.ts";
 import { EmitirEvento } from "@olula/lib/diseño.ts";
 import { imprimir_blob } from "@olula/lib/impresion.ts";
@@ -12,6 +12,7 @@ import {
     conDatosAlbaran,
     metaNuevoEnvioAgencia,
     nuevoEnvioAgenciaInicial,
+    servicioPorDefecto,
 } from "../../dominio.ts";
 import {
     getAgenciasEnvio,
@@ -91,6 +92,14 @@ const FormularioEnvio = ({
         return () => { vigente = false; };
     }, [envio.albaranId, intentar]);
 
+    // Al elegir la agencia (el cambio deja el servicio en blanco) se propone su servicio por defecto.
+    useEffect(() => {
+        const { envio: actualEnvio, set: actualSet } = actual.current;
+        if (!actualEnvio.agenciaId || actualEnvio.servicio) return;
+        const elegida = agencias.find((a) => a.codigo === actualEnvio.agenciaId);
+        actualSet({ ...actualEnvio, servicio: servicioPorDefecto(elegida) });
+    }, [envio.agenciaId, agencias]);
+
     const agencia = agencias.find((a) => a.codigo === envio.agenciaId);
     const opcionesAlbaran = albaranesSinEnvio(orden).map((a) => ({ valor: a.id, descripcion: a.codigo }));
     const opcionesAgencia = agencias.map((a) => ({ valor: a.codigo, descripcion: a.nombre }));
@@ -99,6 +108,7 @@ const FormularioEnvio = ({
     const opcionesPosicion = (agencia?.posicionesEtiqueta ?? [])
         .map((p) => ({ valor: String(p.codigo), descripcion: p.descripcion }));
     // Cada agencia añade aquí sus campos propios; el resto del formulario es común.
+    const permiteCrearRecogida = agencia?.permiteCrearRecogida ?? false;
     const hayCamposDeAgencia = opcionesPosicion.length > 0;
 
     const generar_ = useCallback(async () => {
@@ -124,9 +134,13 @@ const FormularioEnvio = ({
                                     <QSelect label="Albarán" {...uiProps("albaranId")} opciones={opcionesAlbaran} />
                                     <QSelect label="Agencia" {...uiProps("agenciaId")} opciones={opcionesAgencia} />
                                     <QSelect label="Servicio" {...uiProps("servicio")} opciones={opcionesServicio} />
-                                    <QInput label="Fecha de recogida" {...uiProps("fechaRecogida")} />
                                     <QInput label="Bultos" {...uiProps("bultos")} />
                                     <QInput label="Kilos" {...uiProps("kilos")} />
+                                    <QInput label="Fecha de recogida" {...uiProps("fechaRecogida")} />
+                                    {/* Solo si la agencia permite pedir la recogida al grabar (CEX). */}
+                                    {permiteCrearRecogida && (
+                                        <QCheckbox label="Crear recogida" {...uiProps("crearRecogida")} />
+                                    )}
                                     <QInput label="Observaciones" {...uiProps("observaciones")} />
                                 </quimera-formulario>
                             </section>

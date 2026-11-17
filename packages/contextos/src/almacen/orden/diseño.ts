@@ -217,8 +217,12 @@ export interface AgenciaEnvio {
     codigo: string;
     nombre: string;
     servicios: ServicioAgenciaEnvio[];
+    /** El que se propone al elegir la agencia (agenciastrans.codproductoagtdefecto). */
+    servicioPorDefecto: string | null;
     /** Vacía si la agencia (o su tipo de etiqueta) no deja elegir dónde empezar. */
     posicionesEtiqueta: PosicionEtiquetaEnvio[];
+    /** Si al generar el envío se le puede pedir que pase a recogerlo. */
+    permiteCrearRecogida: boolean;
 }
 
 /** Destinatario con el que se pide el envío: el del albarán, editable en el formulario. */
@@ -248,6 +252,8 @@ export interface NuevoEnvioAgencia extends Modelo {
     observaciones: string;
     /** Código de PosicionEtiquetaEnvio; solo cuenta si la agencia ofrece posiciones. */
     posicionEtiqueta: string;
+    /** Pedir a la agencia que pase a recoger el envío en la fecha de recogida. */
+    crearRecogida: boolean;
     // Destinatario (como el formulario de Eneboo: se cambia solo para este envío).
     destNombre: string;
     destNif: string;

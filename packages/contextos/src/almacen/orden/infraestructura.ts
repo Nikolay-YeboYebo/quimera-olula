@@ -662,7 +662,9 @@ interface AgenciaEnvioApi {
     codigo: string;
     nombre: string;
     servicios: { codigo: string; descripcion: string }[];
+    servicio_por_defecto?: string | null;
     posiciones_etiqueta?: { codigo: number; descripcion: string }[];
+    permite_crear_recogida?: boolean;
 }
 
 interface DestinatarioEnvioApi {
@@ -685,7 +687,9 @@ export const agenciaEnvioDesdeApi = (a: AgenciaEnvioApi): AgenciaEnvio => ({
     codigo: a.codigo,
     nombre: a.nombre,
     servicios: a.servicios,
+    servicioPorDefecto: a.servicio_por_defecto ?? null,
     posicionesEtiqueta: a.posiciones_etiqueta ?? [],
+    permiteCrearRecogida: a.permite_crear_recogida ?? false,
 });
 
 export const destinatarioEnvioDesdeApi = (d: DestinatarioEnvioApi): DestinatarioEnvio => ({
@@ -731,6 +735,7 @@ export const envioAgenciaAApi = (envio: NuevoEnvioAgencia) => ({
     fecha_recogida: fechaLocalIso(new Date(envio.fechaRecogida)),
     observaciones: envio.observaciones || null,
     posicion_etiqueta: envio.posicionEtiqueta ? Number(envio.posicionEtiqueta) : null,
+    crear_recogida: envio.crearRecogida,
     destinatario: destinatarioEnvioAApi(envio),
 });
 

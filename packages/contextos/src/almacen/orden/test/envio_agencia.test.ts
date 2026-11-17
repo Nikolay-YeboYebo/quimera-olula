@@ -8,6 +8,7 @@ import {
     nuevoEnvioAgenciaInicial,
     ordenPermiteEnvio,
     ordenVacia,
+    servicioPorDefecto,
 } from "../dominio.ts";
 import {
     agenciaEnvioDesdeApi,
@@ -53,7 +54,8 @@ describe("nuevoEnvioAgenciaInicial", () => {
             orden("SALIDA", "TERMINADA", [sinEnvio, conEnvio]),
             [{
                 codigo: "DACHSER", nombre: "Dachser",
-                servicios: [{ codigo: "Y", descripcion: "targoflex" }], posicionesEtiqueta: [],
+                servicios: [{ codigo: "Y", descripcion: "targoflex" }], servicioPorDefecto: null,
+                posicionesEtiqueta: [], permiteCrearRecogida: false,
             }],
         );
 
@@ -62,17 +64,46 @@ describe("nuevoEnvioAgenciaInicial", () => {
         expect(inicial.servicio).toBe("Y");
         expect(inicial.bultos).toBe(1);
         expect(inicial.posicionEtiqueta).toBe("1");
+        expect(inicial.crearRecogida).toBe(false);
         expect(inicial.destTelefono).toBe("");
     });
 
     test("con varias agencias no elige ninguna", () => {
         const inicial = nuevoEnvioAgenciaInicial(orden("SALIDA", "TERMINADA", [sinEnvio]), [
-            { codigo: "DACHSER", nombre: "Dachser", servicios: [], posicionesEtiqueta: [] },
-            { codigo: "CEX", nombre: "Correos Express", servicios: [], posicionesEtiqueta: [] },
+            {
+                codigo: "DACHSER", nombre: "Dachser", servicios: [], servicioPorDefecto: null,
+                posicionesEtiqueta: [], permiteCrearRecogida: false,
+            },
+            {
+                codigo: "CEX", nombre: "Correos Express", servicios: [], servicioPorDefecto: null,
+                posicionesEtiqueta: [], permiteCrearRecogida: true,
+            },
         ]);
 
         expect(inicial.agenciaId).toBe("");
         expect(inicial.servicio).toBe("");
+    });
+
+    test("con una sola agencia propone su servicio por defecto", () => {
+        const inicial = nuevoEnvioAgenciaInicial(orden("SALIDA", "TERMINADA", [sinEnvio]), [{
+            codigo: "CEX", nombre: "Correos Express",
+            servicios: [{ codigo: "63", descripcion: "Paq24" }, { codigo: "92", descripcion: "Paq Empresa 14" }],
+            servicioPorDefecto: "92", posicionesEtiqueta: [], permiteCrearRecogida: true,
+        }]);
+
+        expect(inicial.servicio).toBe("92");
+    });
+
+    test("servicioPorDefecto: el de la agencia, si no el primero, si no ninguno", () => {
+        const servicios = [{ codigo: "63", descripcion: "Paq24" }, { codigo: "92", descripcion: "Paq Empresa 14" }];
+        const agencia = {
+            codigo: "CEX", nombre: "Correos Express", servicios, servicioPorDefecto: "92",
+            posicionesEtiqueta: [], permiteCrearRecogida: true,
+        };
+        expect(servicioPorDefecto(agencia)).toBe("92");
+        expect(servicioPorDefecto({ ...agencia, servicioPorDefecto: null })).toBe("63");
+        expect(servicioPorDefecto({ ...agencia, servicios: [], servicioPorDefecto: null })).toBe("");
+        expect(servicioPorDefecto(undefined)).toBe("");
     });
 
     test("albaranesSinEnvio descarta los que ya tienen envío", () => {
@@ -117,7 +148,9 @@ describe("metaNuevoEnvioAgencia", () => {
 
 describe("infraestructura del envío por agencia", () => {
     test("envioAgenciaAApi pasa a snake_case y la fecha a ISO, con destinatario y posición", () => {
-        expect(envioAgenciaAApi({ ...envioValido(), posicionEtiqueta: "3", destCodPaisIso: "es" })).toEqual({
+        expect(envioAgenciaAApi({
+            ...envioValido(), posicionEtiqueta: "3", crearRecogida: true, destCodPaisIso: "es",
+        })).toEqual({
             albaran_id: "1",
             agencia_id: "CEX",
             servicio: "PAQ24",
@@ -126,6 +159,7 @@ describe("infraestructura del envío por agencia", () => {
             fecha_recogida: "2026-11-12",
             observaciones: null,
             posicion_etiqueta: 3,
+            crear_recogida: true,
             destinatario: {
                 nombre: "BELDA MARSET, LUCIA", nif: null, tipo_via: "Plaza", via: "Santa María",
                 numero: "2", otros: null, cod_postal: "02640", ciudad: "Almansa", provincia: "Albacete",
@@ -134,11 +168,18 @@ describe("infraestructura del envío por agencia", () => {
         });
     });
 
-    test("agenciaEnvioDesdeApi lee las posiciones de etiqueta", () => {
-        expect(agenciaEnvioDesdeApi({
-            codigo: "CEX", nombre: "Correos Express", servicios: [],
+    test("agenciaEnvioDesdeApi lee las posiciones de etiqueta y si permite crear recogida", () => {
+        const agencia = agenciaEnvioDesdeApi({
+            codigo: "CEX", nombre: "Correos Express", servicios: [], servicio_por_defecto: "92",
             posiciones_etiqueta: [{ codigo: 1, descripcion: "Primera" }, { codigo: 2, descripcion: "Última" }],
-        }).posicionesEtiqueta).toEqual([{ codigo: 1, descripcion: "Primera" }, { codigo: 2, descripcion: "Última" }]);
+            permite_crear_recogida: true,
+        });
+        expect(agencia.posicionesEtiqueta).toEqual([
+            { codigo: 1, descripcion: "Primera" }, { codigo: 2, descripcion: "Última" },
+        ]);
+        expect(agencia.permiteCrearRecogida).toBe(true);
+        expect(agencia.servicioPorDefecto).toBe("92");
+        expect(agenciaEnvioDesdeApi({ codigo: "X", nombre: "X", servicios: [] }).permiteCrearRecogida).toBe(false);
     });
 
     test("destinatarioEnvioDesdeApi deja los nulos en blanco", () => {
