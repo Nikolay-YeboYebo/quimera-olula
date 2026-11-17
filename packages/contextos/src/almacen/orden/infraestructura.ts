@@ -32,7 +32,10 @@ import {
     PostColocacion,
     GetReportEtiquetasOrden,
     AgenciaEnvio,
+    DatosEnvioAlbaran,
+    DestinatarioEnvio,
     GetAgenciasEnvio,
+    GetDatosEnvio,
     GetEtiquetaEnvio,
     NuevoEnvioAgencia,
     PostEnvioAgencia,
@@ -73,6 +76,7 @@ interface OrdenAlmacenApi {
     lineas: LineaOrdenAlmacenApi[];
     lecturas_caja: LecturaCajaOrdenApi[];
     albaranes?: AlbaranOrdenApi[];
+    tiene_cajas?: boolean;
 }
 
 interface AlbaranOrdenApi {
@@ -197,6 +201,7 @@ export const ordenDesdeApi = (api: OrdenAlmacenApi): OrdenAlmacen => ({
     lineas: api.lineas.map(lineaOrdenDesdeApi),
     lecturasCaja: (api.lecturas_caja ?? []).map(lecturaCajaOrdenDesdeApi),
     albaranes: (api.albaranes ?? []).map(albaranOrdenDesdeApi),
+    tieneCajas: api.tiene_cajas ?? false,
 });
 
 export const lecturaLineaOrdenDesdeApi = (api: LecturaLineaOrdenApi): LecturaLineaOrden => ({
@@ -653,6 +658,70 @@ const fechaLocalIso = (fecha: Date): string => {
     return `${fecha.getFullYear()}-${mes}-${dia}`;
 };
 
+interface AgenciaEnvioApi {
+    codigo: string;
+    nombre: string;
+    servicios: { codigo: string; descripcion: string }[];
+    posiciones_etiqueta?: { codigo: number; descripcion: string }[];
+}
+
+interface DestinatarioEnvioApi {
+    nombre: string;
+    nif: string | null;
+    tipo_via: string | null;
+    via: string;
+    numero: string | null;
+    otros: string | null;
+    cod_postal: string | null;
+    ciudad: string;
+    provincia: string | null;
+    cod_pais_iso: string | null;
+    contacto: string | null;
+    telefono: string | null;
+    email: string | null;
+}
+
+export const agenciaEnvioDesdeApi = (a: AgenciaEnvioApi): AgenciaEnvio => ({
+    codigo: a.codigo,
+    nombre: a.nombre,
+    servicios: a.servicios,
+    posicionesEtiqueta: a.posiciones_etiqueta ?? [],
+});
+
+export const destinatarioEnvioDesdeApi = (d: DestinatarioEnvioApi): DestinatarioEnvio => ({
+    nombre: d.nombre ?? "",
+    nif: d.nif ?? "",
+    tipoVia: d.tipo_via ?? "",
+    via: d.via ?? "",
+    numero: d.numero ?? "",
+    otros: d.otros ?? "",
+    codPostal: d.cod_postal ?? "",
+    ciudad: d.ciudad ?? "",
+    provincia: d.provincia ?? "",
+    codPaisIso: d.cod_pais_iso ?? "",
+    contacto: d.contacto ?? "",
+    telefono: d.telefono ?? "",
+    email: d.email ?? "",
+});
+
+const textoONulo = (texto: string): string | null => texto.trim() || null;
+
+const destinatarioEnvioAApi = (envio: NuevoEnvioAgencia): DestinatarioEnvioApi => ({
+    nombre: envio.destNombre.trim(),
+    nif: textoONulo(envio.destNif),
+    tipo_via: textoONulo(envio.destTipoVia),
+    via: envio.destVia.trim(),
+    numero: textoONulo(envio.destNumero),
+    otros: textoONulo(envio.destOtros),
+    cod_postal: textoONulo(envio.destCodPostal),
+    ciudad: envio.destCiudad.trim(),
+    provincia: textoONulo(envio.destProvincia),
+    cod_pais_iso: textoONulo(envio.destCodPaisIso.toUpperCase()),
+    contacto: textoONulo(envio.destContacto),
+    telefono: textoONulo(envio.destTelefono),
+    email: textoONulo(envio.destEmail),
+});
+
 export const envioAgenciaAApi = (envio: NuevoEnvioAgencia) => ({
     albaran_id: envio.albaranId,
     agencia_id: envio.agenciaId,
@@ -661,11 +730,31 @@ export const envioAgenciaAApi = (envio: NuevoEnvioAgencia) => ({
     kilos: Number(envio.kilos),
     fecha_recogida: fechaLocalIso(new Date(envio.fechaRecogida)),
     observaciones: envio.observaciones || null,
+    posicion_etiqueta: envio.posicionEtiqueta ? Number(envio.posicionEtiqueta) : null,
+    destinatario: destinatarioEnvioAApi(envio),
 });
 
 export const getAgenciasEnvio: GetAgenciasEnvio = async () => {
-    const respuesta = await RestAPI.get<{ datos: AgenciaEnvio[] }>(`${urlEnvioAgencia}/agencias`);
-    return respuesta.datos;
+    const respuesta = await RestAPI.get<{ datos: AgenciaEnvioApi[] }>(`${urlEnvioAgencia}/agencias`);
+    return respuesta.datos.map(agenciaEnvioDesdeApi);
+};
+
+interface DatosEnvioApi {
+    destinatario: DestinatarioEnvioApi;
+    bultos: number | null;
+    kilos: number | null;
+}
+
+export const datosEnvioDesdeApi = (d: DatosEnvioApi): DatosEnvioAlbaran => ({
+    destinatario: destinatarioEnvioDesdeApi(d.destinatario),
+    bultos: d.bultos ?? null,
+    kilos: d.kilos ?? null,
+});
+
+export const getDatosEnvio: GetDatosEnvio = async (albaranId) => {
+    const respuesta = await RestAPI.get<{ datos: DatosEnvioApi }>(
+        `${urlEnvioAgencia}/${albaranId}/datos_envio`);
+    return datosEnvioDesdeApi(respuesta.datos);
 };
 
 export const postEnvioAgencia: PostEnvioAgencia = async (ordenId, envio) => {

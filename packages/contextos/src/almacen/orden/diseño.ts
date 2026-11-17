@@ -26,6 +26,8 @@ export interface OrdenAlmacen extends Entidad {
     lecturasCaja: LecturaCajaOrden[];
     /** Albaranes de venta generados al albaranar la orden (solo SALIDA). */
     albaranes: AlbaranGenerado[];
+    /** Si tiene cajas creadas (las del report de etiquetas de cajas). */
+    tieneCajas: boolean;
 }
 
 export interface LineaOrdenAlmacen extends Entidad {
@@ -205,10 +207,35 @@ export interface ServicioAgenciaEnvio {
     descripcion: string;
 }
 
+/** Hueco de la hoja de etiquetas donde empieza a imprimir (1 = el primero). */
+export interface PosicionEtiquetaEnvio {
+    codigo: number;
+    descripcion: string;
+}
+
 export interface AgenciaEnvio {
     codigo: string;
     nombre: string;
     servicios: ServicioAgenciaEnvio[];
+    /** Vacía si la agencia (o su tipo de etiqueta) no deja elegir dónde empezar. */
+    posicionesEtiqueta: PosicionEtiquetaEnvio[];
+}
+
+/** Destinatario con el que se pide el envío: el del albarán, editable en el formulario. */
+export interface DestinatarioEnvio {
+    nombre: string;
+    nif: string;
+    tipoVia: string;
+    via: string;
+    numero: string;
+    otros: string;
+    codPostal: string;
+    ciudad: string;
+    provincia: string;
+    codPaisIso: string;
+    contacto: string;
+    telefono: string;
+    email: string;
 }
 
 export interface NuevoEnvioAgencia extends Modelo {
@@ -219,11 +246,37 @@ export interface NuevoEnvioAgencia extends Modelo {
     kilos: number;
     fechaRecogida: Date;
     observaciones: string;
+    /** Código de PosicionEtiquetaEnvio; solo cuenta si la agencia ofrece posiciones. */
+    posicionEtiqueta: string;
+    // Destinatario (como el formulario de Eneboo: se cambia solo para este envío).
+    destNombre: string;
+    destNif: string;
+    destTipoVia: string;
+    destVia: string;
+    destNumero: string;
+    destOtros: string;
+    destCodPostal: string;
+    destCiudad: string;
+    destProvincia: string;
+    destCodPaisIso: string;
+    destContacto: string;
+    destTelefono: string;
+    destEmail: string;
 }
 
 export type EnvioAgenciaGenerado = { albaranId: string; agenciaId: string; numeroTracking: string };
 
 export type GetAgenciasEnvio = () => Promise<AgenciaEnvio[]>;
+/** Lo que el albarán propone para el envío; el formulario lo deja cambiar. */
+export interface DatosEnvioAlbaran {
+    /** Su dirección de envío (o la del albarán) y teléfono. */
+    destinatario: DestinatarioEnvio;
+    /** Bultos y kilos del albarán (totalbultos / totalpeso); null si no los tiene. */
+    bultos: number | null;
+    kilos: number | null;
+}
+
+export type GetDatosEnvio = (albaranId: string) => Promise<DatosEnvioAlbaran>;
 /** Pide a la agencia el envío de un albarán de una SALIDA terminada. */
 export type PostEnvioAgencia = (ordenId: string, envio: NuevoEnvioAgencia) => Promise<EnvioAgenciaGenerado>;
 /** PDF con las etiquetas del envío de un albarán. */

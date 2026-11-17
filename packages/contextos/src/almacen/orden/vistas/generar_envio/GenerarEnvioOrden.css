@@ -1,0 +1,103 @@
+/*
+ * GenerarEnvioOrden.css — formulario de envío por agencia, como el de Eneboo:
+ * datos del envío a la izquierda y destinatario a la derecha, sin scroll.
+ *
+ * Grid de 12 columnas (quimera-formulario) en cada bloque:
+ *   Envío (común a todas las agencias):
+ *                 albarán (6) + agencia (6)
+ *                 servicio (6) + fecha recogida (6)
+ *                 bultos (6) + kilos (6)
+ *                 observaciones (12)
+ *   <Agencia> (solo si la agencia tiene campos propios, debajo de Envío):
+ *                 posición 1ª etiqueta (6)            — CEX
+ *   Destinatario: nombre (8) + NIF (4)
+ *                 tipo vía (3) + dirección (6) + número (3)
+ *                 otros (4) + CP (3) + ciudad (5)
+ *                 provincia (5) + país (3) + teléfono (4)
+ *                 contacto (6) + email (6)
+ *
+ * El orden de los campos en GenerarEnvioOrden.tsx sigue estas filas: si se
+ * cambia uno, hay que cambiar el otro.
+ */
+
+@media (min-width: 1025px) {
+    quimera-modal[nombre="generarEnvio"] dialog {
+        width: min(1200px, calc(100vw - 4rem));
+        max-width: min(1200px, calc(100vw - 4rem));
+    }
+}
+
+.generar-envio-agencia {
+    display: grid;
+    grid-template-columns: 5fr 7fr;
+    gap: var(--espaciado-xl);
+
+    h4 {
+        margin: 0 0 var(--espaciado-s);
+    }
+
+    .generar-envio-agencia__envio {
+        display: flex;
+        flex-direction: column;
+        gap: var(--espaciado-m);
+    }
+
+    quimera-formulario {
+        padding-bottom: 0;
+    }
+
+    /* Envío */
+    quimera-select[nombre="albaranId"],
+    quimera-select[nombre="agenciaId"],
+    quimera-select[nombre="servicio"],
+    quimera-input[nombre="fechaRecogida"],
+    quimera-input[nombre="bultos"],
+    quimera-input[nombre="kilos"] {
+        grid-column: span 6;
+    }
+
+    quimera-input[nombre="observaciones"] {
+        grid-column: span 12;
+    }
+
+    /* Campos de la agencia */
+    quimera-select[nombre="posicionEtiqueta"] {
+        grid-column: span 6;
+    }
+
+    /* Destinatario */
+    quimera-input[nombre="destNombre"] {
+        grid-column: span 8;
+    }
+
+    quimera-input[nombre="destNif"],
+    quimera-input[nombre="destOtros"],
+    quimera-input[nombre="destTelefono"] {
+        grid-column: span 4;
+    }
+
+    quimera-input[nombre="destTipoVia"],
+    quimera-input[nombre="destNumero"],
+    quimera-input[nombre="destCodPostal"],
+    quimera-input[nombre="destCodPaisIso"] {
+        grid-column: span 3;
+    }
+
+    quimera-input[nombre="destVia"],
+    quimera-input[nombre="destContacto"],
+    quimera-input[nombre="destEmail"] {
+        grid-column: span 6;
+    }
+
+    quimera-input[nombre="destCiudad"],
+    quimera-input[nombre="destProvincia"] {
+        grid-column: span 5;
+    }
+}
+
+/* Tableta y móvil: un bloque debajo del otro (y quimera-formulario ya pone un campo por fila en móvil). */
+@media (max-width: 1024px) {
+    .generar-envio-agencia {
+        grid-template-columns: 1fr;
+    }
+}

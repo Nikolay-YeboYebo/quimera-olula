@@ -162,7 +162,9 @@ export const DetalleOrden = ({
                 {ordenPermiteEnvio(modelo, hayAgenciasEnvio()) && (
                     <QBoton variante="borde" onClick={() => emitir("envio_solicitado")}>Generar envío</QBoton>
                 )}
-                <QBoton variante="borde" onClick={imprimirEtiquetas}>Imprimir etiquetas</QBoton>
+                {modelo.tieneCajas && (
+                    <QBoton variante="borde" onClick={imprimirEtiquetas}>Imprimir etiquetas de cajas</QBoton>
+                )}
                 {sgaActivo && (
                     <QBoton variante="borde" onClick={generarCajas}>Crear cajas</QBoton>
                 )}
@@ -198,11 +200,11 @@ export const DetalleOrden = ({
                                         <>
                                             <span>{agenciaEnvio} {numeroTracking}</span>
                                             <QBoton
-                                                variante="texto"
+                                                variante="borde"
                                                 tamaño="pequeño"
                                                 onClick={() => reimprimirEtiquetaEnvio(id)}
                                             >
-                                                Etiqueta
+                                                Imprimir etiqueta de envío
                                             </QBoton>
                                         </>
                                     )}

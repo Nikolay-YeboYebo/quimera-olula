@@ -4,6 +4,8 @@ import { MetaModelo, plugin } from "@olula/lib/dominio.ts";
 import {
     AgenciaEnvio,
     AlbaranGenerado,
+    DatosEnvioAlbaran,
+    DestinatarioEnvio,
     DiferenciaPedidoOrden,
     ItemOrdenAlmacen,
     LineaOrdenAlmacen,
@@ -32,6 +34,7 @@ export const ordenVacia = (): OrdenAlmacen => ({
     lineas: [],
     lecturasCaja: [],
     albaranes: [],
+    tieneCajas: false,
     pasosPick: null,
     pasosDrop: null,
 });
@@ -278,11 +281,67 @@ export const metaNuevoEnvioAgencia: MetaModelo<NuevoEnvioAgencia> = {
         },
         fechaRecogida: { tipo: "fecha", requerido: true },
         observaciones: { requerido: false },
+        posicionEtiqueta: { requerido: false },
+        // Lo que Eneboo exige del destinatario antes de llamar a la agencia (validateFormCEX).
+        destNombre: { requerido: true },
+        destNif: { requerido: false },
+        destTipoVia: { requerido: false },
+        destVia: { requerido: true },
+        destNumero: { requerido: false },
+        destOtros: { requerido: false },
+        destCodPostal: { requerido: true },
+        destCiudad: { requerido: true },
+        destProvincia: { requerido: false },
+        destCodPaisIso: { requerido: false },
+        destContacto: { requerido: true },
+        destTelefono: { requerido: true },
+        destEmail: { requerido: false },
     },
     onChange: (envio, campo) =>
-        // Los servicios dependen de la agencia: al cambiarla, se elige de nuevo.
-        campo === "agenciaId" ? { ...envio, servicio: "" } : envio,
+        // Los servicios y las posiciones dependen de la agencia: al cambiarla, se eligen de nuevo.
+        campo === "agenciaId" ? { ...envio, servicio: "", posicionEtiqueta: POSICION_ETIQUETA_PRIMERA } : envio,
 };
+
+/** Por defecto la etiqueta empieza en el primer hueco de la hoja. */
+export const POSICION_ETIQUETA_PRIMERA = "1";
+
+export const destinatarioVacio = (): DestinatarioEnvio => ({
+    nombre: "", nif: "", tipoVia: "", via: "", numero: "", otros: "", codPostal: "",
+    ciudad: "", provincia: "", codPaisIso: "", contacto: "", telefono: "", email: "",
+});
+
+type CamposDestinatario = Pick<NuevoEnvioAgencia,
+    "destNombre" | "destNif" | "destTipoVia" | "destVia" | "destNumero" | "destOtros" | "destCodPostal"
+    | "destCiudad" | "destProvincia" | "destCodPaisIso" | "destContacto" | "destTelefono" | "destEmail">;
+
+const camposDestinatario = (d: DestinatarioEnvio): CamposDestinatario => ({
+    destNombre: d.nombre,
+    destNif: d.nif,
+    destTipoVia: d.tipoVia,
+    destVia: d.via,
+    destNumero: d.numero,
+    destOtros: d.otros,
+    destCodPostal: d.codPostal,
+    destCiudad: d.ciudad,
+    destProvincia: d.provincia,
+    destCodPaisIso: d.codPaisIso,
+    destContacto: d.contacto,
+    destTelefono: d.telefono,
+    destEmail: d.email,
+});
+
+/** Pone en el formulario el destinatario (el del albarán al elegirlo). */
+export const conDestinatario = (envio: NuevoEnvioAgencia, d: DestinatarioEnvio): NuevoEnvioAgencia => ({
+    ...envio,
+    ...camposDestinatario(d),
+});
+
+/** Al elegir el albarán: su destinatario y, si los tiene, sus bultos y kilos. */
+export const conDatosAlbaran = (envio: NuevoEnvioAgencia, datos: DatosEnvioAlbaran): NuevoEnvioAgencia => ({
+    ...conDestinatario(envio, datos.destinatario),
+    bultos: datos.bultos ?? envio.bultos,
+    kilos: datos.kilos ?? envio.kilos,
+});
 
 export const nuevoEnvioAgenciaInicial = (
     orden: OrdenAlmacen,
@@ -298,5 +357,7 @@ export const nuevoEnvioAgenciaInicial = (
         kilos: 1,
         fechaRecogida: new Date(),
         observaciones: "",
+        posicionEtiqueta: POSICION_ETIQUETA_PRIMERA,
+        ...camposDestinatario(destinatarioVacio()),
     };
 };
