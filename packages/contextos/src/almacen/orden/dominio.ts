@@ -10,6 +10,7 @@ import {
     ItemOrdenAlmacen,
     LineaOrdenAlmacen,
     NuevoEnvioAgencia,
+    NuevoManifiestoEnvios,
     OrdenAlmacen,
 } from "./diseño.ts";
 
@@ -345,6 +346,25 @@ export const conDatosAlbaran = (envio: NuevoEnvioAgencia, datos: DatosEnvioAlbar
     bultos: datos.bultos ?? envio.bultos,
     kilos: datos.kilos ?? envio.kilos,
 });
+
+export const agenciasConManifiesto = (agencias: AgenciaEnvio[]): AgenciaEnvio[] =>
+    agencias.filter((a) => a.permiteManifiesto);
+
+export const metaManifiestoEnvios: MetaModelo<NuevoManifiestoEnvios> = {
+    campos: {
+        agenciaId: { requerido: true },
+        fecha: { tipo: "fecha", requerido: true },
+    },
+};
+
+/** La agencia, si solo hay una con manifiesto, y la fecha de hoy. */
+export const manifiestoEnviosInicial = (agencias: AgenciaEnvio[]): NuevoManifiestoEnvios => {
+    const conManifiesto = agenciasConManifiesto(agencias);
+    return {
+        agenciaId: conManifiesto.length === 1 ? conManifiesto[0].codigo : "",
+        fecha: new Date(),
+    };
+};
 
 /** El servicio que se propone al elegir la agencia: el suyo por defecto o, si no tiene, el primero. */
 export const servicioPorDefecto = (agencia: AgenciaEnvio | undefined | null): string =>

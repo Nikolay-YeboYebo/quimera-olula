@@ -3,7 +3,7 @@ import { ListaActivaEntidades } from "@olula/lib/ListaActivaEntidades.js";
 import { ItemOrdenAlmacen } from "../../diseño.ts";
 import * as maestro from "./maestro.js";
 
-export type EstadoMaestroOrden = 'INICIAL' | 'CREANDO';
+export type EstadoMaestroOrden = 'INICIAL' | 'CREANDO' | 'MANIFIESTO';
 
 export type ContextoMaestroOrden = {
     estado: EstadoMaestroOrden;
@@ -22,6 +22,11 @@ export const getMaquina: () => Maquina<EstadoMaestroOrden, ContextoMaestroOrden>
             siguiente_pagina: [maestro.Ordenes.filtrar, maestro.ampliarOrdenes],
             crear_modulo_solicitado: "CREANDO",
             adquirir_solicitado: maestro.adquirirOrdenActiva,
+            manifiesto_solicitado: "MANIFIESTO",
+        },
+
+        MANIFIESTO: {
+            manifiesto_cerrado: "INICIAL",
         },
 
         CREANDO: {

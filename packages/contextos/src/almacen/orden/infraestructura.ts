@@ -37,6 +37,7 @@ import {
     GetAgenciasEnvio,
     GetDatosEnvio,
     GetEtiquetaEnvio,
+    GetManifiestoEnvios,
     NuevoEnvioAgencia,
     PostEnvioAgencia,
 } from "./diseño.ts";
@@ -669,6 +670,7 @@ interface AgenciaEnvioApi {
     servicio_por_defecto?: string | null;
     posiciones_etiqueta?: { codigo: number; descripcion: string }[];
     permite_crear_recogida?: boolean;
+    permite_manifiesto?: boolean;
 }
 
 interface DestinatarioEnvioApi {
@@ -694,6 +696,7 @@ export const agenciaEnvioDesdeApi = (a: AgenciaEnvioApi): AgenciaEnvio => ({
     servicioPorDefecto: a.servicio_por_defecto ?? null,
     posicionesEtiqueta: a.posiciones_etiqueta ?? [],
     permiteCrearRecogida: a.permite_crear_recogida ?? false,
+    permiteManifiesto: a.permite_manifiesto ?? false,
 });
 
 export const destinatarioEnvioDesdeApi = (d: DestinatarioEnvioApi): DestinatarioEnvio => ({
@@ -778,6 +781,12 @@ export const postEnvioAgencia: PostEnvioAgencia = async (ordenId, envio) => {
         numeroTracking: respuesta.numero_tracking,
     };
 };
+
+export const getManifiestoEnvios: GetManifiestoEnvios = async (agenciaId, fecha) =>
+    RestAPI.blob(
+        `${urlEnvioAgencia}/manifiesto/${agenciaId}?fecha=${fechaLocalIso(new Date(fecha))}`,
+        "Error al obtener el manifiesto de envíos",
+    );
 
 export const getEtiquetaEnvio: GetEtiquetaEnvio = async (albaranId) =>
     RestAPI.blob(`${urlEnvioAgencia}/${albaranId}/etiqueta`, "Error al obtener la etiqueta del envío");

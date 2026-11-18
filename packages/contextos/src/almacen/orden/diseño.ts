@@ -227,7 +227,18 @@ export interface AgenciaEnvio {
     posicionesEtiqueta: PosicionEtiquetaEnvio[];
     /** Si al generar el envío se le puede pedir que pase a recogerlo. */
     permiteCrearRecogida: boolean;
+    /** Si da el manifiesto (PDF) de los envíos de un día. */
+    permiteManifiesto: boolean;
 }
+
+/** Petición del manifiesto de envíos de una agencia para una fecha de recogida. */
+export interface NuevoManifiestoEnvios extends Modelo {
+    agenciaId: string;
+    fecha: Date;
+}
+
+/** PDF del manifiesto de la agencia con los envíos que tienen esa fecha de recogida. */
+export type GetManifiestoEnvios = (agenciaId: string, fecha: Date) => Promise<Blob>;
 
 /** Destinatario con el que se pide el envío: el del albarán, editable en el formulario. */
 export interface DestinatarioEnvio {

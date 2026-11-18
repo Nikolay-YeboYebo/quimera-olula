@@ -16,12 +16,14 @@ import {
     ESTADOS_ORDEN_DEFECTO,
     estadosOrdenDesdeFiltro,
     filtroEstadoOrden,
+    hayAgenciasEnvio,
     opcionesEstadoOrden,
     ordenAdquirible,
     usuarioActualId,
 } from "../../dominio.ts";
 import { CrearOrden } from "../crear/CrearOrden.tsx";
 import { DetalleOrden } from "../detalle/DetalleOrden.tsx";
+import { ManifiestoEnvios } from "../manifiesto_envios/ManifiestoEnvios.tsx";
 import { ContextoMaestroOrden, getMaquina } from "./maquina.ts";
 
 const OPCIONES_RESPONSABLE = [
@@ -171,6 +173,11 @@ export const MaestroOrden = () => {
                                     >
                                         Adquirir
                                     </QBoton>
+                                    {hayAgenciasEnvio() && (
+                                        <QBoton variante="borde" onClick={() => emitir("manifiesto_solicitado")}>
+                                            Manifiesto de envíos
+                                        </QBoton>
+                                    )}
                                 </div>
                             )}
                             onSeleccion={(payload) =>
@@ -191,6 +198,9 @@ export const MaestroOrden = () => {
             />
             {ctx.estado === "CREANDO" && (
                 <CrearOrden publicar={emitir} />
+            )}
+            {ctx.estado === "MANIFIESTO" && (
+                <ManifiestoEnvios publicar={emitir} />
             )}
         </div>
     );

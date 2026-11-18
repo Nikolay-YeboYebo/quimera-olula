@@ -7,6 +7,8 @@ import {
     metaNuevoEnvioAgencia,
     nuevoEnvioAgenciaInicial,
     ordenPermiteEnvio,
+    manifiestoEnviosInicial,
+    metaManifiestoEnvios,
     ordenVacia,
     servicioPorDefecto,
 } from "../dominio.ts";
@@ -55,7 +57,7 @@ describe("nuevoEnvioAgenciaInicial", () => {
             [{
                 codigo: "DACHSER", nombre: "Dachser",
                 servicios: [{ codigo: "Y", descripcion: "targoflex" }], servicioPorDefecto: null,
-                posicionesEtiqueta: [], permiteCrearRecogida: false,
+                posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto: false,
             }],
         );
 
@@ -72,11 +74,11 @@ describe("nuevoEnvioAgenciaInicial", () => {
         const inicial = nuevoEnvioAgenciaInicial(orden("SALIDA", "TERMINADA", [sinEnvio]), [
             {
                 codigo: "DACHSER", nombre: "Dachser", servicios: [], servicioPorDefecto: null,
-                posicionesEtiqueta: [], permiteCrearRecogida: false,
+                posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto: false,
             },
             {
                 codigo: "CEX", nombre: "Correos Express", servicios: [], servicioPorDefecto: null,
-                posicionesEtiqueta: [], permiteCrearRecogida: true,
+                posicionesEtiqueta: [], permiteCrearRecogida: true, permiteManifiesto: true,
             },
         ]);
 
@@ -89,6 +91,7 @@ describe("nuevoEnvioAgenciaInicial", () => {
             codigo: "CEX", nombre: "Correos Express",
             servicios: [{ codigo: "63", descripcion: "Paq24" }, { codigo: "92", descripcion: "Paq Empresa 14" }],
             servicioPorDefecto: "92", posicionesEtiqueta: [], permiteCrearRecogida: true,
+            permiteManifiesto: true,
         }]);
 
         expect(inicial.servicio).toBe("92");
@@ -98,7 +101,7 @@ describe("nuevoEnvioAgenciaInicial", () => {
         const servicios = [{ codigo: "63", descripcion: "Paq24" }, { codigo: "92", descripcion: "Paq Empresa 14" }];
         const agencia = {
             codigo: "CEX", nombre: "Correos Express", servicios, servicioPorDefecto: "92",
-            posicionesEtiqueta: [], permiteCrearRecogida: true,
+            posicionesEtiqueta: [], permiteCrearRecogida: true, permiteManifiesto: true,
         };
         expect(servicioPorDefecto(agencia)).toBe("92");
         expect(servicioPorDefecto({ ...agencia, servicioPorDefecto: null })).toBe("63");
@@ -173,12 +176,14 @@ describe("infraestructura del envío por agencia", () => {
             codigo: "CEX", nombre: "Correos Express", servicios: [], servicio_por_defecto: "92",
             posiciones_etiqueta: [{ codigo: 1, descripcion: "Primera" }, { codigo: 2, descripcion: "Última" }],
             permite_crear_recogida: true,
+            permite_manifiesto: true,
         });
         expect(agencia.posicionesEtiqueta).toEqual([
             { codigo: 1, descripcion: "Primera" }, { codigo: 2, descripcion: "Última" },
         ]);
         expect(agencia.permiteCrearRecogida).toBe(true);
         expect(agencia.servicioPorDefecto).toBe("92");
+        expect(agencia.permiteManifiesto).toBe(true);
         expect(agenciaEnvioDesdeApi({ codigo: "X", nombre: "X", servicios: [] }).permiteCrearRecogida).toBe(false);
     });
 
@@ -241,5 +246,27 @@ describe("conDatosAlbaran", () => {
     test("si el albarán no tiene bultos ni kilos deja los del formulario", () => {
         const envio = conDatosAlbaran(envioValido(), { destinatario, bultos: null, kilos: null });
         expect([envio.bultos, envio.kilos]).toEqual([2, 12.5]);
+    });
+});
+
+describe("manifiesto de envíos", () => {
+    const agencia = (codigo: string, permiteManifiesto: boolean) => ({
+        codigo, nombre: codigo, servicios: [], servicioPorDefecto: null,
+        posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto,
+    });
+
+    test("propone la única agencia con manifiesto y la fecha de hoy", () => {
+        const inicial = manifiestoEnviosInicial([agencia("DACHSER", false), agencia("CEX", true)]);
+        expect(inicial.agenciaId).toBe("CEX");
+        expect(inicial.fecha.toDateString()).toBe(new Date().toDateString());
+    });
+
+    test("con varias agencias con manifiesto no elige ninguna", () => {
+        expect(manifiestoEnviosInicial([agencia("A", true), agencia("B", true)]).agenciaId).toBe("");
+    });
+
+    test("hace falta agencia y fecha", () => {
+        expect(modeloEsValido(metaManifiestoEnvios)({ agenciaId: "CEX", fecha: new Date() })).toBe(true);
+        expect(modeloEsValido(metaManifiestoEnvios)({ agenciaId: "", fecha: new Date() })).toBe(false);
     });
 });
