@@ -50,6 +50,10 @@
             color: var(--color-texto-secundario);
         }
 
+        .DetalleOrden__estado-envio {
+            font-size: var(--tamaño-letra-s);
+        }
+
         .DetalleOrden__albaran {
             display: inline-flex;
             align-items: baseline;

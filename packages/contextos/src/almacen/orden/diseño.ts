@@ -178,6 +178,10 @@ export type AlbaranGenerado = {
     /** Agencia y nº de envío, solo si el albarán ya tiene envío por agencia. */
     agenciaEnvio?: string;
     numeroTracking?: string;
+    /** Estado que da la agencia (p. ej. "12: ENTREGADO"), o "Etiqueta generada". */
+    estadoEnvio?: string;
+    /** Si se pidió a la agencia que pase a recogerlo. */
+    recogida?: { numero: string; estado: string | null };
 };
 /** Genera los albaranes de una SALIDA PREPARADA y la termina; devuelve los albaranes generados. */
 export type AlbaranarOrden = (id: string) => Promise<AlbaranGenerado[]>;

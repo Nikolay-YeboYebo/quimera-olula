@@ -84,6 +84,8 @@ interface AlbaranOrdenApi {
     codigo: string;
     agencia_envio?: string | null;
     numero_tracking?: string | null;
+    estado_envio?: string | null;
+    recogida?: { numero: string; estado: string | null } | null;
 }
 
 interface LecturaLineaOrdenApi {
@@ -179,6 +181,8 @@ const albaranOrdenDesdeApi = (api: AlbaranOrdenApi) => ({
     ...(api.numero_tracking
         ? { agenciaEnvio: api.agencia_envio ?? "", numeroTracking: api.numero_tracking }
         : {}),
+    ...(api.numero_tracking && api.estado_envio ? { estadoEnvio: api.estado_envio } : {}),
+    ...(api.numero_tracking && api.recogida ? { recogida: api.recogida } : {}),
 });
 
 export const ordenDesdeApi = (api: OrdenAlmacenApi): OrdenAlmacen => ({

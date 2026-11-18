@@ -117,7 +117,8 @@ const FormularioEnvio = ({
         publicar("envio_generado", generado);
     }, [orden.id, envio, publicar]);
 
-    const [generar, cancelar] = useForm(generar_, cancelar_);
+    // `generando` mientras se pide el envío a la agencia: evita pedirlo dos veces.
+    const [generar, cancelar, generando] = useForm(generar_, cancelar_);
 
     return (
         <QModal abierto={true} nombre="generarEnvio" titulo="Generar envío por agencia" onCerrar={cancelar}>
@@ -185,8 +186,8 @@ const FormularioEnvio = ({
                         </section>
                     </div>
                     <div className="botones maestro-botones">
-                        <QBoton onClick={generar} deshabilitado={!valido}>
-                            Generar envío
+                        <QBoton onClick={generar} deshabilitado={!valido || generando}>
+                            {generando ? "Generando envío…" : "Generar envío"}
                         </QBoton>
                     </div>
                 </>

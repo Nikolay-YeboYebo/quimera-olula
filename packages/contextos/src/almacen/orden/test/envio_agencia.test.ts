@@ -200,6 +200,10 @@ describe("infraestructura del envío por agencia", () => {
             albaranes: [
                 { id: 1, codigo: "A1" },
                 { id: 2, codigo: "A2", agencia_envio: "CEX", numero_tracking: "613000" },
+                {
+                    id: 3, codigo: "A3", agencia_envio: "CEX", numero_tracking: "614000",
+                    estado_envio: "1: SIN RECEPCION", recogida: { numero: "100292480", estado: "0: ASIGNADA" },
+                },
             ],
         };
 
@@ -207,6 +211,10 @@ describe("infraestructura del envío por agencia", () => {
         expect(ordenDesdeApi(api as any).albaranes).toEqual([
             { id: "1", codigo: "A1" },
             { id: "2", codigo: "A2", agenciaEnvio: "CEX", numeroTracking: "613000" },
+            {
+                id: "3", codigo: "A3", agenciaEnvio: "CEX", numeroTracking: "614000",
+                estadoEnvio: "1: SIN RECEPCION", recogida: { numero: "100292480", estado: "0: ASIGNADA" },
+            },
         ]);
     });
 

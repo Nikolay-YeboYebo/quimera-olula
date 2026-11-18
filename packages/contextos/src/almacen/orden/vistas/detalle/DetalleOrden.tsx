@@ -193,12 +193,21 @@ export const DetalleOrden = ({
                     {modelo.albaranes.length > 0 && (
                         <div className="DetalleOrden__albaranes">
                             <span>{modelo.albaranes.length === 1 ? "Albarán" : "Albaranes"}</span>
-                            {modelo.albaranes.map(({ id, codigo, agenciaEnvio, numeroTracking }) => (
+                            {modelo.albaranes.map(({ id, codigo, agenciaEnvio, numeroTracking, estadoEnvio, recogida }) => (
                                 <span key={id} className="DetalleOrden__albaran">
                                     <Link to={`/ventas/albaran?id=${id}`}>{codigo}</Link>
                                     {numeroTracking && (
                                         <>
                                             <span>{agenciaEnvio} {numeroTracking}</span>
+                                            {estadoEnvio && (
+                                                <span className="DetalleOrden__estado-envio">{estadoEnvio}</span>
+                                            )}
+                                            {recogida && (
+                                                <span className="DetalleOrden__estado-envio">
+                                                    Recogida {recogida.numero}
+                                                    {recogida.estado ? ` (${recogida.estado})` : ""}
+                                                </span>
+                                            )}
                                             <QBoton
                                                 variante="borde"
                                                 tamaño="pequeño"
