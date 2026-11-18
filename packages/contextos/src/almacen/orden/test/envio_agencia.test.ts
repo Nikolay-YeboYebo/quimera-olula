@@ -213,16 +213,30 @@ describe("infraestructura del envío por agencia", () => {
                     id: 3, codigo: "A3", agencia_envio: "CEX", numero_tracking: "614000",
                     estado_envio: "1: SIN RECEPCION", recogida: { numero: "100292480", estado: "0: ASIGNADA" },
                 },
+                {
+                    id: 4, codigo: "A4", agencia_envio: "DACHSER", numero_tracking: "4947374462",
+                    estado_envio: "Etiqueta generada",
+                    permite_confirmar_envio: true, permite_anular_envio: true,
+                },
             ],
         };
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         expect(ordenDesdeApi(api as any).albaranes).toEqual([
             { id: "1", codigo: "A1" },
-            { id: "2", codigo: "A2", agenciaEnvio: "CEX", numeroTracking: "613000" },
+            {
+                id: "2", codigo: "A2", agenciaEnvio: "CEX", numeroTracking: "613000",
+                permiteConfirmarEnvio: false, permiteAnularEnvio: false,
+            },
             {
                 id: "3", codigo: "A3", agenciaEnvio: "CEX", numeroTracking: "614000",
                 estadoEnvio: "1: SIN RECEPCION", recogida: { numero: "100292480", estado: "0: ASIGNADA" },
+                permiteConfirmarEnvio: false, permiteAnularEnvio: false,
+            },
+            {
+                id: "4", codigo: "A4", agenciaEnvio: "DACHSER", numeroTracking: "4947374462",
+                estadoEnvio: "Etiqueta generada",
+                permiteConfirmarEnvio: true, permiteAnularEnvio: true,
             },
         ]);
     });

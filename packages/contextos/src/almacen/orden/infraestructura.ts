@@ -41,6 +41,8 @@ import {
     GetManifiestoEnvios,
     NuevoEnvioAgencia,
     PasoSeguimientoEnvio,
+    PostAnularEnvio,
+    PostConfirmarEnvio,
     PostEnvioAgencia,
     SeguimientoEnvio,
 } from "./diseño.ts";
@@ -90,6 +92,8 @@ interface AlbaranOrdenApi {
     numero_tracking?: string | null;
     estado_envio?: string | null;
     recogida?: { numero: string; estado: string | null } | null;
+    permite_confirmar_envio?: boolean;
+    permite_anular_envio?: boolean;
 }
 
 interface LecturaLineaOrdenApi {
@@ -187,6 +191,12 @@ const albaranOrdenDesdeApi = (api: AlbaranOrdenApi) => ({
         : {}),
     ...(api.numero_tracking && api.estado_envio ? { estadoEnvio: api.estado_envio } : {}),
     ...(api.numero_tracking && api.recogida ? { recogida: api.recogida } : {}),
+    ...(api.numero_tracking
+        ? {
+            permiteConfirmarEnvio: api.permite_confirmar_envio ?? false,
+            permiteAnularEnvio: api.permite_anular_envio ?? false,
+        }
+        : {}),
 });
 
 export const ordenDesdeApi = (api: OrdenAlmacenApi): OrdenAlmacen => ({
@@ -808,6 +818,16 @@ export const getDatosEnvio: GetDatosEnvio = async (albaranId) => {
     const respuesta = await RestAPI.get<{ datos: DatosEnvioApi }>(
         `${urlEnvioAgencia}/${albaranId}/datos_envio`);
     return datosEnvioDesdeApi(respuesta.datos);
+};
+
+export const postConfirmarEnvio: PostConfirmarEnvio = async (albaranId) => {
+    await RestAPI.post(`${urlEnvioAgencia}/${albaranId}/confirmar`, {},
+        "Error al confirmar el envío a la agencia");
+};
+
+export const postAnularEnvio: PostAnularEnvio = async (albaranId) => {
+    await RestAPI.post(`${urlEnvioAgencia}/${albaranId}/anular`, {},
+        "Error al anular el envío en la agencia");
 };
 
 export const postEnvioAgencia: PostEnvioAgencia = async (ordenId, envio) => {

@@ -7,6 +7,7 @@ import { QBoton } from "@olula/componentes/atomos/qboton.tsx";
 import { Detalle } from "@olula/componentes/detalle/Detalle.tsx";
 import { useMaquina } from "@olula/componentes/hook/useMaquina.js";
 import { QInput } from "@olula/componentes/index.js";
+import { QModalConfirmacion } from "@olula/componentes/moleculas/qmodalconfirmacion.tsx";
 import { ContextoError } from "@olula/lib/contexto.ts";
 import { EmitirEvento } from "@olula/lib/diseño.js";
 import { plugin } from "@olula/lib/dominio.js";
@@ -28,7 +29,13 @@ import {
     ordenVacia,
     pedidoUnicoDeOrden,
 } from "../../dominio.ts";
-import { crearCajasOrden, getEtiquetaEnvio, getReportEtiquetasOrden } from "../../infraestructura.ts";
+import {
+    crearCajasOrden,
+    getEtiquetaEnvio,
+    getReportEtiquetasOrden,
+    postAnularEnvio,
+    postConfirmarEnvio,
+} from "../../infraestructura.ts";
 import { AlbaranarOrden } from "../albaranar/AlbaranarOrden.tsx";
 import { BorrarOrden } from "../borrar/BorrarOrden.tsx";
 import { GenerarEnvioOrden } from "../generar_envio/GenerarEnvioOrden.tsx";
@@ -79,6 +86,33 @@ export const DetalleOrden = ({
 
     // Albarán cuyo seguimiento se está viendo (se pregunta a la agencia al abrirlo).
     const [seguimientoDe, setSeguimientoDe] = useState<{ id: string; codigo: string } | null>(null);
+    // Albarán cuyo envío se va a anular (se pide confirmación antes).
+    const [anulacionDe, setAnulacionDe] = useState<{ id: string; codigo: string } | null>(null);
+    // Mientras se llama a la agencia, para no pedir lo mismo dos veces.
+    const [llamandoAgencia, setLlamandoAgencia] = useState(false);
+
+    const accionEnvio = useCallback(async (accion: () => Promise<void>) => {
+        setLlamandoAgencia(true);
+        try {
+            await intentar(async () => {
+                await accion();
+                await emitir("orden_id_cambiada", ctx.orden.id, true);
+            });
+        } finally {
+            setLlamandoAgencia(false);
+        }
+    }, [ctx.orden.id, emitir, intentar]);
+
+    const confirmarEnvio = useCallback(
+        (albaranId: string) => accionEnvio(() => postConfirmarEnvio(albaranId)),
+        [accionEnvio]);
+
+    const anularEnvio = useCallback(async () => {
+        if (!anulacionDe) return;
+        const albaranId = anulacionDe.id;
+        setAnulacionDe(null);
+        await accionEnvio(() => postAnularEnvio(albaranId));
+    }, [accionEnvio, anulacionDe]);
 
     const reimprimirEtiquetaEnvio = useCallback(async (albaranId: string) => {
         await intentar(async () => {
@@ -197,7 +231,10 @@ export const DetalleOrden = ({
                     {modelo.albaranes.length > 0 && (
                         <div className="DetalleOrden__albaranes">
                             <span>{modelo.albaranes.length === 1 ? "Albarán" : "Albaranes"}</span>
-                            {modelo.albaranes.map(({ id, codigo, agenciaEnvio, numeroTracking, estadoEnvio, recogida }) => (
+                            {modelo.albaranes.map(({
+                                id, codigo, agenciaEnvio, numeroTracking, estadoEnvio, recogida,
+                                permiteConfirmarEnvio, permiteAnularEnvio,
+                            }) => (
                                 <span key={id} className="DetalleOrden__albaran">
                                     <Link to={`/ventas/albaran?id=${id}`}>{codigo}</Link>
                                     {numeroTracking && (
@@ -227,6 +264,25 @@ export const DetalleOrden = ({
                                                 >
                                                     Seguimiento
                                                 </QBoton>
+                                                {permiteConfirmarEnvio && (
+                                                    <QBoton
+                                                        tamaño="pequeño"
+                                                        deshabilitado={llamandoAgencia}
+                                                        onClick={() => confirmarEnvio(id)}
+                                                    >
+                                                        Confirmar envío
+                                                    </QBoton>
+                                                )}
+                                                {permiteAnularEnvio && (
+                                                    <QBoton
+                                                        variante="borde"
+                                                        tamaño="pequeño"
+                                                        deshabilitado={llamandoAgencia}
+                                                        onClick={() => setAnulacionDe({ id, codigo })}
+                                                    >
+                                                        Anular envío
+                                                    </QBoton>
+                                                )}
                                             </span>
                                         </>
                                     )}
@@ -306,6 +362,20 @@ export const DetalleOrden = ({
                 publicar={emitir}
                 modoVoz={modoVoz}
             />
+
+            {anulacionDe && (
+                <QModalConfirmacion
+                    nombre="confirmarAnularEnvio"
+                    abierto={true}
+                    titulo="Anular envío"
+                    mensaje={`Se pedirá a la agencia que anule el envío del albarán ${anulacionDe.codigo}`
+                        + " y el albarán quedará sin envío ni etiquetas."}
+                    onCerrar={() => setAnulacionDe(null)}
+                    onAceptar={anularEnvio}
+                    labelAceptar="Anular envío"
+                    destructivo
+                />
+            )}
 
             {seguimientoDe && (
                 <SeguimientoEnvioAlbaran

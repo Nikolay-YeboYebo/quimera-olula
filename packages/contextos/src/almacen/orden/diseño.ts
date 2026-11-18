@@ -182,6 +182,10 @@ export type AlbaranGenerado = {
     estadoEnvio?: string;
     /** Si se pidió a la agencia que pase a recogerlo. */
     recogida?: { numero: string; estado: string | null };
+    /** Si hay que confirmar a la agencia la orden recién generada (Dachser: "Enviar orden"). */
+    permiteConfirmarEnvio?: boolean;
+    /** Si se puede pedir a la agencia que anule el envío. */
+    permiteAnularEnvio?: boolean;
 };
 /** Genera los albaranes de una SALIDA PREPARADA y la termina; devuelve los albaranes generados. */
 export type AlbaranarOrden = (id: string) => Promise<AlbaranGenerado[]>;
@@ -322,5 +326,9 @@ export interface SeguimientoEnvio {
 export type GetSeguimientoEnvio = (albaranId: string) => Promise<SeguimientoEnvio>;
 /** Pide a la agencia el envío de un albarán de una SALIDA terminada. */
 export type PostEnvioAgencia = (ordenId: string, envio: NuevoEnvioAgencia) => Promise<EnvioAgenciaGenerado>;
+/** Confirma a la agencia la orden de envío recién generada de un albarán. */
+export type PostConfirmarEnvio = (albaranId: string) => Promise<void>;
+/** Anula en la agencia el envío de un albarán y lo deja sin envío. */
+export type PostAnularEnvio = (albaranId: string) => Promise<void>;
 /** PDF con las etiquetas del envío de un albarán. */
 export type GetEtiquetaEnvio = (albaranId: string) => Promise<Blob>;
