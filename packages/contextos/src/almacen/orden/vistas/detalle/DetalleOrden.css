@@ -54,9 +54,22 @@
             font-size: var(--tamaño-letra-s);
         }
 
+        /* Si no cabe en el panel, salta de línea en vez de salirse por la derecha. */
         .DetalleOrden__albaran {
             display: inline-flex;
-            align-items: baseline;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: var(--espaciado-s);
+            max-width: 100%;
+
+            > span {
+                white-space: nowrap;
+            }
+        }
+
+        /* Los botones del envío van juntos. */
+        .DetalleOrden__acciones-envio {
+            display: inline-flex;
             gap: var(--espaciado-s);
         }
     }

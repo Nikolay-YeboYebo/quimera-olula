@@ -12,6 +12,7 @@ import {
     NuevoEnvioAgencia,
     NuevoManifiestoEnvios,
     OrdenAlmacen,
+    PasoSeguimientoEnvio,
 } from "./diseño.ts";
 
 export const ERR_SKU_REQUERIDO = "El SKU es requerido";
@@ -388,4 +389,20 @@ export const nuevoEnvioAgenciaInicial = (
         crearRecogida: false,
         ...camposDestinatario(destinatarioVacio()),
     };
+};
+
+/** "1 SIN RECEPCION" (o solo la descripción si la agencia no da código). */
+export const textoPasoSeguimiento = (paso: PasoSeguimientoEnvio): string =>
+    paso.codigo ? `${paso.codigo} ${paso.descripcion}` : paso.descripcion;
+
+export const fechaPasoSeguimiento = (momento: Date | null): string =>
+    momento
+        ? momento.toLocaleString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric",
+            hour: "2-digit", minute: "2-digit" })
+        : "";
+
+/** El mensaje de un error de la API (el servidor manda el motivo en texto). */
+export const mensajeErrorSeguimiento = (error: unknown): string => {
+    const { descripcion, nombre } = (error ?? {}) as { descripcion?: string; nombre?: string };
+    return descripcion || nombre || "No se ha podido consultar el seguimiento";
 };

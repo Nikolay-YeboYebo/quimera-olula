@@ -1,0 +1,46 @@
+/* SeguimientoEnvio.css — tablas de estados del envío y de la recogida. */
+
+.seguimiento-envio {
+    display: flex;
+    flex-direction: column;
+    gap: var(--espaciado-m);
+
+    h4 {
+        margin: 0 0 var(--espaciado-s);
+    }
+
+    p {
+        margin: 0;
+    }
+
+    .seguimiento-envio__tabla {
+        width: 100%;
+        border-collapse: collapse;
+        /* Mismas columnas en la tabla del envío y en la de la recogida. */
+        table-layout: fixed;
+
+        th:nth-child(1) {
+            width: 35%;
+        }
+
+        th:nth-child(2) {
+            width: 40%;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: var(--espaciado-xs, 0.25rem) var(--espaciado-s);
+            border-bottom: 1px solid var(--color-borde-sutil);
+        }
+
+        th {
+            font-weight: 600;
+        }
+
+        /* Fecha y hora sin partir. */
+        td:first-child {
+            white-space: nowrap;
+        }
+    }
+}

@@ -298,6 +298,28 @@ export interface DatosEnvioAlbaran {
 }
 
 export type GetDatosEnvio = (albaranId: string) => Promise<DatosEnvioAlbaran>;
+
+/** Un estado por el que ha pasado el envío (o una situación de su recogida). */
+export interface PasoSeguimientoEnvio {
+    momento: Date | null;
+    codigo: string | null;
+    descripcion: string;
+    incidencia: string | null;
+}
+
+/** Recorrido del envío preguntado a la agencia al momento (no se guarda). */
+export interface SeguimientoEnvio {
+    agencia: string;
+    numeroTracking: string;
+    /** Del más antiguo al más reciente. */
+    estados: PasoSeguimientoEnvio[];
+    /** Solo si al generar el envío se pidió recogida. */
+    recogida: { numero: string; situaciones: PasoSeguimientoEnvio[] } | null;
+    /** Lo que la agencia no ha podido dar (p. ej. el envío sí y la recogida no). */
+    errores: string[];
+}
+
+export type GetSeguimientoEnvio = (albaranId: string) => Promise<SeguimientoEnvio>;
 /** Pide a la agencia el envío de un albarán de una SALIDA terminada. */
 export type PostEnvioAgencia = (ordenId: string, envio: NuevoEnvioAgencia) => Promise<EnvioAgenciaGenerado>;
 /** PDF con las etiquetas del envío de un albarán. */

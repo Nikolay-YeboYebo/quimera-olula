@@ -36,10 +36,13 @@ import {
     DestinatarioEnvio,
     GetAgenciasEnvio,
     GetDatosEnvio,
+    GetSeguimientoEnvio,
     GetEtiquetaEnvio,
     GetManifiestoEnvios,
     NuevoEnvioAgencia,
+    PasoSeguimientoEnvio,
     PostEnvioAgencia,
+    SeguimientoEnvio,
 } from "./diseño.ts";
 
 
@@ -762,6 +765,44 @@ export const datosEnvioDesdeApi = (d: DatosEnvioApi): DatosEnvioAlbaran => ({
     bultos: d.bultos ?? null,
     kilos: d.kilos ?? null,
 });
+
+interface PasoSeguimientoEnvioApi {
+    momento: string | null;
+    codigo: string | null;
+    descripcion: string;
+    incidencia: string | null;
+}
+
+interface SeguimientoEnvioApi {
+    agencia: string;
+    numero_tracking: string;
+    estados: PasoSeguimientoEnvioApi[];
+    recogida: { numero: string; situaciones: PasoSeguimientoEnvioApi[] } | null;
+    errores: string[];
+}
+
+const pasoSeguimientoDesdeApi = (p: PasoSeguimientoEnvioApi): PasoSeguimientoEnvio => ({
+    momento: p.momento ? new Date(p.momento) : null,
+    codigo: p.codigo ?? null,
+    descripcion: p.descripcion ?? "",
+    incidencia: p.incidencia ?? null,
+});
+
+export const seguimientoEnvioDesdeApi = (s: SeguimientoEnvioApi): SeguimientoEnvio => ({
+    agencia: s.agencia,
+    numeroTracking: s.numero_tracking,
+    estados: (s.estados ?? []).map(pasoSeguimientoDesdeApi),
+    recogida: s.recogida
+        ? { numero: s.recogida.numero, situaciones: (s.recogida.situaciones ?? []).map(pasoSeguimientoDesdeApi) }
+        : null,
+    errores: s.errores ?? [],
+});
+
+export const getSeguimientoEnvio: GetSeguimientoEnvio = async (albaranId) => {
+    const respuesta = await RestAPI.get<{ datos: SeguimientoEnvioApi }>(
+        `${urlEnvioAgencia}/${albaranId}/seguimiento`);
+    return seguimientoEnvioDesdeApi(respuesta.datos);
+};
 
 export const getDatosEnvio: GetDatosEnvio = async (albaranId) => {
     const respuesta = await RestAPI.get<{ datos: DatosEnvioApi }>(

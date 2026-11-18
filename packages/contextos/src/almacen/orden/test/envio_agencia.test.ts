@@ -11,6 +11,9 @@ import {
     metaManifiestoEnvios,
     ordenVacia,
     servicioPorDefecto,
+    fechaPasoSeguimiento,
+    mensajeErrorSeguimiento,
+    textoPasoSeguimiento,
 } from "../dominio.ts";
 import {
     agenciaEnvioDesdeApi,
@@ -18,6 +21,7 @@ import {
     destinatarioEnvioDesdeApi,
     envioAgenciaAApi,
     ordenDesdeApi,
+    seguimientoEnvioDesdeApi,
 } from "../infraestructura.ts";
 
 const destinatario = {
@@ -268,5 +272,53 @@ describe("manifiesto de envíos", () => {
     test("hace falta agencia y fecha", () => {
         expect(modeloEsValido(metaManifiestoEnvios)({ agenciaId: "CEX", fecha: new Date() })).toBe(true);
         expect(modeloEsValido(metaManifiestoEnvios)({ agenciaId: "", fecha: new Date() })).toBe(false);
+    });
+});
+
+describe("Seguimiento del envío", () => {
+    const api = {
+        agencia: "Correos Express",
+        numero_tracking: "2630002513427878",
+        estados: [
+            { momento: "2026-11-18T13:24:29", codigo: "1", descripcion: "SIN RECEPCION", incidencia: null },
+        ],
+        recogida: {
+            numero: "100292500",
+            situaciones: [
+                { momento: "2026-11-18T13:24:33", codigo: "3", descripcion: "PDTE ASIGNAR", incidencia: null },
+                { momento: null, codigo: null, descripcion: "ASIGNADA", incidencia: "Sin motivo" },
+            ],
+        },
+        errores: [],
+    };
+
+    it("lee estados y recogida de la API", () => {
+        const s = seguimientoEnvioDesdeApi(api);
+
+        expect(s.numeroTracking).toBe("2630002513427878");
+        expect(s.estados[0].momento).toEqual(new Date(2026, 10, 18, 13, 24, 29));
+        expect(s.recogida?.numero).toBe("100292500");
+        expect(s.recogida?.situaciones[1].momento).toBeNull();
+        expect(s.recogida?.situaciones[1].incidencia).toBe("Sin motivo");
+    });
+
+    it("sin recogida", () => {
+        expect(seguimientoEnvioDesdeApi({ ...api, recogida: null }).recogida).toBeNull();
+    });
+
+    it("texto y fecha de cada paso", () => {
+        const [estado] = seguimientoEnvioDesdeApi(api).estados;
+
+        expect(textoPasoSeguimiento(estado)).toBe("1 SIN RECEPCION");
+        expect(textoPasoSeguimiento({ ...estado, codigo: null })).toBe("SIN RECEPCION");
+        expect(fechaPasoSeguimiento(estado.momento)).toBe("18/11/2026, 13:24");
+        expect(fechaPasoSeguimiento(null)).toBe("");
+    });
+
+    it("el motivo del error del servidor", () => {
+        expect(mensajeErrorSeguimiento({ nombre: "Error 409", descripcion: "La agencia DACHSER no da el seguimiento de los envíos" }))
+            .toBe("La agencia DACHSER no da el seguimiento de los envíos");
+        expect(mensajeErrorSeguimiento({ nombre: "Error 500", descripcion: "" })).toBe("Error 500");
+        expect(mensajeErrorSeguimiento(undefined)).toBe("No se ha podido consultar el seguimiento");
     });
 });

@@ -15,7 +15,7 @@ import { listaEntidadesInicial } from "@olula/lib/ListaEntidades.js";
 import { useModelo } from "@olula/lib/useModelo.ts";
 import { usePreferencia } from "@olula/lib/usePreferencia.ts";
 import { desbloquearTTS, useSintesisVoz } from "@olula/lib/voz/useSintesisVoz.ts";
-import { useCallback, useContext, useEffect } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
 import { TipoOrden } from "../../../comun/componentes/TipoOrden.tsx";
 import { LineaOrdenAlmacen, OrdenAlmacen } from "../../diseño.ts";
@@ -32,6 +32,7 @@ import { crearCajasOrden, getEtiquetaEnvio, getReportEtiquetasOrden } from "../.
 import { AlbaranarOrden } from "../albaranar/AlbaranarOrden.tsx";
 import { BorrarOrden } from "../borrar/BorrarOrden.tsx";
 import { GenerarEnvioOrden } from "../generar_envio/GenerarEnvioOrden.tsx";
+import { SeguimientoEnvioAlbaran } from "../seguimiento_envio/SeguimientoEnvio.tsx";
 import { ColocacionOrden } from "../colocar/ColocacionOrden.tsx";
 import { TerminarOrden } from "../terminar/TerminarOrden.tsx";
 import { calcularAccionPrincipal } from "./accion_principal.ts";
@@ -75,6 +76,9 @@ export const DetalleOrden = ({
             imprimir_blob(blob);
         });
     }, [ctx.orden.id, intentar]);
+
+    // Albarán cuyo seguimiento se está viendo (se pregunta a la agencia al abrirlo).
+    const [seguimientoDe, setSeguimientoDe] = useState<{ id: string; codigo: string } | null>(null);
 
     const reimprimirEtiquetaEnvio = useCallback(async (albaranId: string) => {
         await intentar(async () => {
@@ -208,13 +212,22 @@ export const DetalleOrden = ({
                                                     {recogida.estado ? ` (${recogida.estado})` : ""}
                                                 </span>
                                             )}
-                                            <QBoton
-                                                variante="borde"
-                                                tamaño="pequeño"
-                                                onClick={() => reimprimirEtiquetaEnvio(id)}
-                                            >
-                                                Imprimir etiqueta de envío
-                                            </QBoton>
+                                            <span className="DetalleOrden__acciones-envio">
+                                                <QBoton
+                                                    variante="borde"
+                                                    tamaño="pequeño"
+                                                    onClick={() => reimprimirEtiquetaEnvio(id)}
+                                                >
+                                                    Imprimir etiqueta de envío
+                                                </QBoton>
+                                                <QBoton
+                                                    variante="borde"
+                                                    tamaño="pequeño"
+                                                    onClick={() => setSeguimientoDe({ id, codigo })}
+                                                >
+                                                    Seguimiento
+                                                </QBoton>
+                                            </span>
                                         </>
                                     )}
                                 </span>
@@ -293,6 +306,14 @@ export const DetalleOrden = ({
                 publicar={emitir}
                 modoVoz={modoVoz}
             />
+
+            {seguimientoDe && (
+                <SeguimientoEnvioAlbaran
+                    albaranId={seguimientoDe.id}
+                    codigo={seguimientoDe.codigo}
+                    onCerrar={() => setSeguimientoDe(null)}
+                />
+            )}
 
             {ctx.estado === "BORRANDO" && (
                 <BorrarOrden
