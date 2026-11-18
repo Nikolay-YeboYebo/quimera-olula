@@ -233,7 +233,50 @@ export interface AgenciaEnvio {
     permiteCrearRecogida: boolean;
     /** Si da el manifiesto (PDF) de los envíos de un día. */
     permiteManifiesto: boolean;
+    /** Si el envío lleva líneas de mercancía que se pueden cambiar (Dachser). */
+    permiteLineas: boolean;
+    /** Tipos de palé en que se puede agrupar el envío; vacía si no se agrupa. */
+    tiposPale: string[];
+    /** Lo que cabe de la dirección en la etiqueta (Dachser: 2 líneas de 30); null si no la corta. */
+    direccionEtiqueta: { lineas: number; caracteres: number } | null;
 }
+
+/** Datos ADR (mercancía peligrosa) del artículo de una línea. */
+export interface MercanciaPeligrosaEnvio {
+    /** LQ, ADR, EQ o EV. */
+    tipo: string | null;
+    numeroUn: string | null;
+    clase: string | null;
+    sustancia: string | null;
+    /** Tipo de embalaje ADR. */
+    embalaje: string | null;
+    /** Peligrosa para el medio ambiente: solo entonces van los datos ADR a la agencia (como Eneboo). */
+    medioambiente: boolean;
+    categoriaTransporte: string | null;
+    puntoInflamacion: string | null;
+    grupoEmbalaje: string | null;
+    capacidad: number | null;
+}
+
+/** Línea de mercancía del envío (tabla de líneas del envío Dachser de Eneboo). */
+export interface LineaEnvio {
+    contenido: string;
+    /** Etiquetas (bultos físicos) que genera la línea. */
+    etiquetas: number;
+    /** Bultos de mercancía peligrosa. */
+    bultos: number;
+    embalaje: string;
+    /** Medidas en cm. */
+    largo: number;
+    ancho: number;
+    alto: number;
+    kilos: number;
+    /** Palé en que va, si el envío va agrupado en palés. */
+    posicionPale: number;
+    adr: MercanciaPeligrosaEnvio | null;
+}
+
+export type GetLineasEnvio = (albaranId: string, agenciaId: string) => Promise<LineaEnvio[]>;
 
 /** Petición del manifiesto de envíos de una agencia para una fecha de recogida. */
 export interface NuevoManifiestoEnvios extends Modelo {
@@ -273,6 +316,10 @@ export interface NuevoEnvioAgencia extends Modelo {
     posicionEtiqueta: string;
     /** Pedir a la agencia que pase a recoger el envío en la fecha de recogida. */
     crearRecogida: boolean;
+    /** "Agrupados en palés" (solo si la agencia tiene tipos de palé): bultos = bultos por palé. */
+    agrupadoEnPales: boolean;
+    tipoPale: string;
+    numPales: number;
     // Destinatario (como el formulario de Eneboo: se cambia solo para este envío).
     destNombre: string;
     destNif: string;
@@ -325,7 +372,11 @@ export interface SeguimientoEnvio {
 
 export type GetSeguimientoEnvio = (albaranId: string) => Promise<SeguimientoEnvio>;
 /** Pide a la agencia el envío de un albarán de una SALIDA terminada. */
-export type PostEnvioAgencia = (ordenId: string, envio: NuevoEnvioAgencia) => Promise<EnvioAgenciaGenerado>;
+export type PostEnvioAgencia = (
+    ordenId: string,
+    envio: NuevoEnvioAgencia,
+    opciones?: { lineas?: LineaEnvio[]; conPales?: boolean },
+) => Promise<EnvioAgenciaGenerado>;
 /** Confirma a la agencia la orden de envío recién generada de un albarán. */
 export type PostConfirmarEnvio = (albaranId: string) => Promise<void>;
 /** Anula en la agencia el envío de un albarán y lo deja sin envío. */

@@ -36,9 +36,11 @@ import {
     DestinatarioEnvio,
     GetAgenciasEnvio,
     GetDatosEnvio,
+    GetLineasEnvio,
     GetSeguimientoEnvio,
     GetEtiquetaEnvio,
     GetManifiestoEnvios,
+    LineaEnvio,
     NuevoEnvioAgencia,
     PasoSeguimientoEnvio,
     PostAnularEnvio,
@@ -684,6 +686,9 @@ interface AgenciaEnvioApi {
     posiciones_etiqueta?: { codigo: number; descripcion: string }[];
     permite_crear_recogida?: boolean;
     permite_manifiesto?: boolean;
+    permite_lineas?: boolean;
+    tipos_pale?: string[];
+    direccion_etiqueta?: { lineas: number; caracteres: number } | null;
 }
 
 interface DestinatarioEnvioApi {
@@ -710,7 +715,86 @@ export const agenciaEnvioDesdeApi = (a: AgenciaEnvioApi): AgenciaEnvio => ({
     posicionesEtiqueta: a.posiciones_etiqueta ?? [],
     permiteCrearRecogida: a.permite_crear_recogida ?? false,
     permiteManifiesto: a.permite_manifiesto ?? false,
+    permiteLineas: a.permite_lineas ?? false,
+    tiposPale: a.tipos_pale ?? [],
+    direccionEtiqueta: a.direccion_etiqueta ?? null,
 });
+
+interface MercanciaPeligrosaEnvioApi {
+    tipo: string | null;
+    numero_un: string | null;
+    clase: string | null;
+    sustancia: string | null;
+    embalaje: string | null;
+    medioambiente: boolean;
+    categoria_transporte: string | null;
+    punto_inflamacion: string | null;
+    grupo_embalaje: string | null;
+    capacidad: number | null;
+}
+
+interface LineaEnvioApi {
+    contenido: string;
+    etiquetas: number;
+    bultos: number;
+    embalaje: string;
+    largo: number;
+    ancho: number;
+    alto: number;
+    kilos: number;
+    posicion_pale: number;
+    adr: MercanciaPeligrosaEnvioApi | null;
+}
+
+export const lineaEnvioDesdeApi = (l: LineaEnvioApi): LineaEnvio => ({
+    contenido: l.contenido ?? "",
+    etiquetas: Number(l.etiquetas),
+    bultos: Number(l.bultos),
+    embalaje: l.embalaje ?? "",
+    largo: Number(l.largo),
+    ancho: Number(l.ancho),
+    alto: Number(l.alto),
+    kilos: Number(l.kilos),
+    posicionPale: Number(l.posicion_pale ?? 1),
+    adr: l.adr
+        ? {
+            tipo: l.adr.tipo, numeroUn: l.adr.numero_un, clase: l.adr.clase,
+            sustancia: l.adr.sustancia, embalaje: l.adr.embalaje,
+            medioambiente: !!l.adr.medioambiente,
+            categoriaTransporte: l.adr.categoria_transporte,
+            puntoInflamacion: l.adr.punto_inflamacion,
+            grupoEmbalaje: l.adr.grupo_embalaje, capacidad: l.adr.capacidad,
+        }
+        : null,
+});
+
+export const lineaEnvioAApi = (l: LineaEnvio): LineaEnvioApi => ({
+    contenido: l.contenido,
+    etiquetas: l.etiquetas,
+    bultos: l.bultos,
+    embalaje: l.embalaje,
+    largo: l.largo,
+    ancho: l.ancho,
+    alto: l.alto,
+    kilos: l.kilos,
+    posicion_pale: l.posicionPale,
+    adr: l.adr
+        ? {
+            tipo: l.adr.tipo, numero_un: l.adr.numeroUn, clase: l.adr.clase,
+            sustancia: l.adr.sustancia, embalaje: l.adr.embalaje,
+            medioambiente: l.adr.medioambiente,
+            categoria_transporte: l.adr.categoriaTransporte,
+            punto_inflamacion: l.adr.puntoInflamacion,
+            grupo_embalaje: l.adr.grupoEmbalaje, capacidad: l.adr.capacidad,
+        }
+        : null,
+});
+
+export const getLineasEnvio: GetLineasEnvio = async (albaranId, agenciaId) => {
+    const respuesta = await RestAPI.get<{ datos: LineaEnvioApi[] }>(
+        `${urlEnvioAgencia}/${albaranId}/lineas/${agenciaId}`);
+    return respuesta.datos.map(lineaEnvioDesdeApi);
+};
 
 export const destinatarioEnvioDesdeApi = (d: DestinatarioEnvioApi): DestinatarioEnvio => ({
     nombre: d.nombre ?? "",
@@ -746,7 +830,11 @@ const destinatarioEnvioAApi = (envio: NuevoEnvioAgencia): DestinatarioEnvioApi =
     email: textoONulo(envio.destEmail),
 });
 
-export const envioAgenciaAApi = (envio: NuevoEnvioAgencia) => ({
+/** `lineas`: las de la tabla (agencias con líneas); `conPales`: si la agencia agrupa en palés. */
+export const envioAgenciaAApi = (
+    envio: NuevoEnvioAgencia,
+    { lineas = [], conPales = false }: { lineas?: LineaEnvio[]; conPales?: boolean } = {},
+) => ({
     albaran_id: envio.albaranId,
     agencia_id: envio.agenciaId,
     servicio: envio.servicio,
@@ -757,6 +845,10 @@ export const envioAgenciaAApi = (envio: NuevoEnvioAgencia) => ({
     posicion_etiqueta: envio.posicionEtiqueta ? Number(envio.posicionEtiqueta) : null,
     crear_recogida: envio.crearRecogida,
     destinatario: destinatarioEnvioAApi(envio),
+    lineas: lineas.length > 0 ? lineas.map(lineaEnvioAApi) : null,
+    pales: conPales && envio.agrupadoEnPales
+        ? { tipo: envio.tipoPale, numero: Number(envio.numPales) }
+        : null,
 });
 
 export const getAgenciasEnvio: GetAgenciasEnvio = async () => {
@@ -830,10 +922,10 @@ export const postAnularEnvio: PostAnularEnvio = async (albaranId) => {
         "Error al anular el envío en la agencia");
 };
 
-export const postEnvioAgencia: PostEnvioAgencia = async (ordenId, envio) => {
+export const postEnvioAgencia: PostEnvioAgencia = async (ordenId, envio, opciones) => {
     const respuesta = await RestAPI.post(
         `${baseUrl}/${ordenId}/envio_agencia`,
-        envioAgenciaAApi(envio),
+        envioAgenciaAApi(envio, opciones),
         "Error al generar el envío por agencia",
     ) as unknown as { albaran_id: string; agencia_id: string; numero_tracking: string };
     return {

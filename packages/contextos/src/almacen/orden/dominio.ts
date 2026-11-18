@@ -11,6 +11,7 @@ import {
     LineaOrdenAlmacen,
     NuevoEnvioAgencia,
     NuevoManifiestoEnvios,
+    LineaEnvio,
     OrdenAlmacen,
     PasoSeguimientoEnvio,
 } from "./diseño.ts";
@@ -285,6 +286,14 @@ export const metaNuevoEnvioAgencia: MetaModelo<NuevoEnvioAgencia> = {
         observaciones: { requerido: false },
         posicionEtiqueta: { requerido: false },
         crearRecogida: { tipo: "checkbox", requerido: false },
+        agrupadoEnPales: { tipo: "checkbox", requerido: false },
+        tipoPale: { requerido: false },
+        numPales: {
+            tipo: "entero",
+            requerido: false,
+            validacion: (m) => !m.agrupadoEnPales || (Number.isInteger(Number(m.numPales)) && Number(m.numPales) > 0)
+                || "Debe haber al menos un palé",
+        },
         // Lo que Eneboo exige del destinatario antes de llamar a la agencia (validateFormCEX).
         destNombre: { requerido: true },
         destNif: { requerido: false },
@@ -387,6 +396,10 @@ export const nuevoEnvioAgenciaInicial = (
         observaciones: "",
         posicionEtiqueta: POSICION_ETIQUETA_PRIMERA,
         crearRecogida: false,
+        // Como Eneboo: "Agrupados en palés" marcado, un palé del primer tipo.
+        agrupadoEnPales: true,
+        tipoPale: agencia?.tiposPale[0] ?? "",
+        numPales: 1,
         ...camposDestinatario(destinatarioVacio()),
     };
 };
@@ -405,4 +418,109 @@ export const fechaPasoSeguimiento = (momento: Date | null): string =>
 export const mensajeErrorSeguimiento = (error: unknown): string => {
     const { descripcion, nombre } = (error ?? {}) as { descripcion?: string; nombre?: string };
     return descripcion || nombre || "No se ha podido consultar el seguimiento";
+};
+
+// Líneas de mercancía (tabla de líneas del envío Dachser de Eneboo).
+
+/** Si el envío se agrupa en palés: solo si la agencia tiene tipos de palé. */
+export const enviaEnPales = (agencia: AgenciaEnvio | undefined, envio: NuevoEnvioAgencia): boolean =>
+    (agencia?.tiposPale.length ?? 0) > 0 && envio.agrupadoEnPales;
+
+/**
+ * Bultos y kilos de la cabecera a partir de las líneas, como Eneboo
+ * (dameTotalBultosKilosEnvio): los bultos son las etiquetas de todas las líneas,
+ * o 1 (bultos por palé) si va agrupado en palés; los kilos, la suma de las líneas.
+ */
+export const totalesLineas = (lineas: LineaEnvio[], enPales: boolean): { bultos: number; kilos: number } => ({
+    bultos: enPales ? 1 : lineas.reduce((total, l) => total + l.etiquetas, 0),
+    kilos: Math.round(lineas.reduce((total, l) => total + l.kilos, 0) * 100) / 100,
+});
+
+export const conTotalesLineas = (envio: NuevoEnvioAgencia, lineas: LineaEnvio[], enPales: boolean): NuevoEnvioAgencia =>
+    lineas.length === 0 ? envio : { ...envio, ...totalesLineas(lineas, enPales) };
+
+/** Lo que Eneboo enseña como descripción del envío (no se manda a la agencia). */
+export const descripcionEnvio = (lineas: LineaEnvio[]): string =>
+    lineas.some((l) => l.adr?.medioambiente)
+        ? "Productos químicos, pinturas y adhesivos"
+        : "Envío normal sin ADR";
+
+export type CampoLineaEnvio = "contenido" | "etiquetas" | "bultos" | "embalaje" | "largo" | "ancho"
+    | "alto" | "kilos" | "posicionPale";
+
+const CAMPOS_TEXTO_LINEA: CampoLineaEnvio[] = ["contenido", "embalaje"];
+
+export const cambiarLineaEnvio = (
+    lineas: LineaEnvio[], indice: number, campo: CampoLineaEnvio, valor: string,
+): LineaEnvio[] =>
+    lineas.map((linea, i) => i !== indice
+        ? linea
+        : { ...linea, [campo]: CAMPOS_TEXTO_LINEA.includes(campo) ? valor : Number(valor.replace(",", ".")) || 0 });
+
+/** "ADR UN 3077 · 9", "LQ", ... (vacío si no es mercancía peligrosa). */
+export const textoAdr = (linea: LineaEnvio): string => {
+    const adr = linea.adr;
+    if (!adr) return "";
+    return [adr.tipo, adr.numeroUn ? `UN ${adr.numeroUn}` : "", adr.clase ? `cl. ${adr.clase}` : ""]
+        .filter(Boolean).join(" ");
+};
+
+/** El primer problema de las líneas (como valida el servidor), o null. */
+export const errorLineasEnvio = (lineas: LineaEnvio[], enPales: boolean, numPales: number): string | null => {
+    for (const l of lineas) {
+        const nombre = `Línea "${l.contenido}"`;
+        if (!(l.etiquetas >= 1)) return `${nombre}: debe tener al menos una etiqueta`;
+        if (!(l.bultos >= 1)) return `${nombre}: debe tener al menos un bulto`;
+        if (!(l.kilos > 0)) return `${nombre}: los kilos deben ser mayores que 0`;
+        if (!(Math.min(l.largo, l.ancho, l.alto) > 0)) return `${nombre}: faltan las medidas`;
+        if (enPales && !(l.posicionPale >= 1 && l.posicionPale <= numPales)) {
+            return `${nombre}: va en un palé que no existe (${l.posicionPale})`;
+        }
+    }
+    return null;
+};
+
+// Dirección en la etiqueta (Dachser corta calle y complemento a 30 caracteres).
+// Se reparte igual que en el servidor (transporte_dachser/.../direccion.py).
+
+/** Tipo de vía, calle y número, y detrás los otros datos: "Calle Can Calafat 63, Local 60". */
+export const direccionCompletaEnvio = (envio: NuevoEnvioAgencia): string => {
+    const calle = [envio.destTipoVia, envio.destVia, envio.destNumero]
+        .map((p) => (p ?? "").trim()).filter(Boolean).join(" ");
+    const otros = (envio.destOtros ?? "").trim();
+    return calle && otros ? `${calle}, ${otros}` : calle || otros;
+};
+
+/** Líneas de `ancho` caracteres como mucho, cortando entre palabras. */
+export const repartirDireccion = (texto: string, ancho: number): string[] => {
+    const lineas: string[] = [];
+    let actual = "";
+    for (let palabra of texto.split(/\s+/).filter(Boolean)) {
+        while (palabra.length > ancho) {
+            if (actual) {
+                lineas.push(actual);
+                actual = "";
+            }
+            lineas.push(palabra.slice(0, ancho));
+            palabra = palabra.slice(ancho);
+        }
+        if (!actual) actual = palabra;
+        else if (actual.length + 1 + palabra.length <= ancho) actual = `${actual} ${palabra}`;
+        else {
+            lineas.push(actual);
+            actual = palabra;
+        }
+    }
+    if (actual) lineas.push(actual);
+    return lineas;
+};
+
+/** Cómo saldrá la dirección en la etiqueta de la agencia, y si cabe; null si la agencia no la corta. */
+export const direccionEnEtiqueta = (
+    agencia: AgenciaEnvio | undefined, envio: NuevoEnvioAgencia,
+): { lineas: string[]; cabe: boolean } | null => {
+    const formato = agencia?.direccionEtiqueta;
+    if (!formato) return null;
+    const lineas = repartirDireccion(direccionCompletaEnvio(envio), formato.caracteres);
+    return { lineas, cabe: lineas.length <= formato.lineas };
 };

@@ -1,5 +1,5 @@
 import { modeloEsValido } from "@olula/lib/dominio.ts";
-import { NuevoEnvioAgencia, OrdenAlmacen, TipoOrden } from "../diseño.ts";
+import { AgenciaEnvio, LineaEnvio, NuevoEnvioAgencia, OrdenAlmacen, TipoOrden } from "../diseño.ts";
 import {
     albaranesSinEnvio,
     conDatosAlbaran,
@@ -11,6 +11,16 @@ import {
     metaManifiestoEnvios,
     ordenVacia,
     servicioPorDefecto,
+    cambiarLineaEnvio,
+    conTotalesLineas,
+    descripcionEnvio,
+    enviaEnPales,
+    errorLineasEnvio,
+    textoAdr,
+    totalesLineas,
+    direccionCompletaEnvio,
+    direccionEnEtiqueta,
+    repartirDireccion,
     fechaPasoSeguimiento,
     mensajeErrorSeguimiento,
     textoPasoSeguimiento,
@@ -22,6 +32,8 @@ import {
     envioAgenciaAApi,
     ordenDesdeApi,
     seguimientoEnvioDesdeApi,
+    lineaEnvioAApi,
+    lineaEnvioDesdeApi,
 } from "../infraestructura.ts";
 
 const destinatario = {
@@ -62,6 +74,7 @@ describe("nuevoEnvioAgenciaInicial", () => {
                 codigo: "DACHSER", nombre: "Dachser",
                 servicios: [{ codigo: "Y", descripcion: "targoflex" }], servicioPorDefecto: null,
                 posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto: false,
+                permiteLineas: true, tiposPale: ["EU", "ISO"], direccionEtiqueta: null,
             }],
         );
 
@@ -79,10 +92,12 @@ describe("nuevoEnvioAgenciaInicial", () => {
             {
                 codigo: "DACHSER", nombre: "Dachser", servicios: [], servicioPorDefecto: null,
                 posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto: false,
+                permiteLineas: true, tiposPale: ["EU", "ISO"], direccionEtiqueta: null,
             },
             {
                 codigo: "CEX", nombre: "Correos Express", servicios: [], servicioPorDefecto: null,
                 posicionesEtiqueta: [], permiteCrearRecogida: true, permiteManifiesto: true,
+                permiteLineas: false, tiposPale: [], direccionEtiqueta: null,
             },
         ]);
 
@@ -95,7 +110,7 @@ describe("nuevoEnvioAgenciaInicial", () => {
             codigo: "CEX", nombre: "Correos Express",
             servicios: [{ codigo: "63", descripcion: "Paq24" }, { codigo: "92", descripcion: "Paq Empresa 14" }],
             servicioPorDefecto: "92", posicionesEtiqueta: [], permiteCrearRecogida: true,
-            permiteManifiesto: true,
+            permiteManifiesto: true, permiteLineas: false, tiposPale: [], direccionEtiqueta: null,
         }]);
 
         expect(inicial.servicio).toBe("92");
@@ -106,6 +121,7 @@ describe("nuevoEnvioAgenciaInicial", () => {
         const agencia = {
             codigo: "CEX", nombre: "Correos Express", servicios, servicioPorDefecto: "92",
             posicionesEtiqueta: [], permiteCrearRecogida: true, permiteManifiesto: true,
+            permiteLineas: false, tiposPale: [], direccionEtiqueta: null,
         };
         expect(servicioPorDefecto(agencia)).toBe("92");
         expect(servicioPorDefecto({ ...agencia, servicioPorDefecto: null })).toBe("63");
@@ -172,6 +188,8 @@ describe("infraestructura del envío por agencia", () => {
                 numero: "2", otros: null, cod_postal: "02640", ciudad: "Almansa", provincia: "Albacete",
                 cod_pais_iso: "ES", contacto: "BELDA MARSET, LUCIA", telefono: "600000000", email: null,
             },
+            lineas: null,
+            pales: null,
         });
     });
 
@@ -271,6 +289,7 @@ describe("manifiesto de envíos", () => {
     const agencia = (codigo: string, permiteManifiesto: boolean) => ({
         codigo, nombre: codigo, servicios: [], servicioPorDefecto: null,
         posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto,
+        permiteLineas: false, tiposPale: [], direccionEtiqueta: null,
     });
 
     test("propone la única agencia con manifiesto y la fecha de hoy", () => {
@@ -334,5 +353,108 @@ describe("Seguimiento del envío", () => {
             .toBe("La agencia DACHSER no da el seguimiento de los envíos");
         expect(mensajeErrorSeguimiento({ nombre: "Error 500", descripcion: "" })).toBe("Error 500");
         expect(mensajeErrorSeguimiento(undefined)).toBe("No se ha podido consultar el seguimiento");
+    });
+});
+
+describe("Líneas de mercancía del envío (Dachser)", () => {
+    const adr: LineaEnvio = {
+        contenido: "20260B000017", etiquetas: 1, bultos: 2, embalaje: "PA", largo: 50, ancho: 50,
+        alto: 50, kilos: 50, posicionPale: 1,
+        adr: {
+            tipo: "ADR", numeroUn: "3077", clase: "9", sustancia: "Imidacloprid", embalaje: "S",
+            medioambiente: true, categoriaTransporte: null, puntoInflamacion: null,
+            grupoEmbalaje: "III", capacidad: 25,
+        },
+    };
+    const normal: LineaEnvio = {
+        contenido: "White Spirit D-60", etiquetas: 1, bultos: 5, embalaje: "PA", largo: 1, ancho: 1,
+        alto: 1, kilos: 1, posicionPale: 1, adr: null,
+    };
+    const dachser: AgenciaEnvio = {
+        codigo: "DACHSER", nombre: "Dachser", servicios: [], servicioPorDefecto: null,
+        posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto: false,
+        permiteLineas: true, tiposPale: ["EU", "ISO", "PAL", "PF", "BX"],
+        direccionEtiqueta: { lineas: 2, caracteres: 30 },
+    };
+
+    test("bultos y kilos de la cabecera como Eneboo", () => {
+        const lineas = [adr, { ...normal, etiquetas: 2 }];
+
+        expect(totalesLineas(lineas, false)).toEqual({ bultos: 3, kilos: 51 });
+        // Agrupados en palés: 1 bulto por palé.
+        expect(totalesLineas(lineas, true)).toEqual({ bultos: 1, kilos: 51 });
+        // Sin líneas se quedan los del albarán.
+        expect(conTotalesLineas(envioValido(), [], false).bultos).toBe(2);
+    });
+
+    test("solo se agrupa en palés si la agencia tiene tipos de palé", () => {
+        expect(enviaEnPales(dachser, { ...envioValido(), agrupadoEnPales: true })).toBe(true);
+        expect(enviaEnPales(dachser, { ...envioValido(), agrupadoEnPales: false })).toBe(false);
+        expect(enviaEnPales({ ...dachser, tiposPale: [] }, { ...envioValido(), agrupadoEnPales: true }))
+            .toBe(false);
+    });
+
+    test("descripción del envío", () => {
+        expect(descripcionEnvio([adr, normal])).toBe("Productos químicos, pinturas y adhesivos");
+        expect(descripcionEnvio([normal])).toBe("Envío normal sin ADR");
+        expect(descripcionEnvio([{ ...adr, adr: { ...adr.adr!, medioambiente: false } }]))
+            .toBe("Envío normal sin ADR");
+    });
+
+    test("cambiar una celda", () => {
+        const [cambiada] = cambiarLineaEnvio([adr], 0, "largo", "120,5");
+        expect(cambiada.largo).toBe(120.5);
+        expect(cambiarLineaEnvio([adr], 0, "embalaje", "EU")[0].embalaje).toBe("EU");
+        expect(cambiarLineaEnvio([adr], 0, "kilos", "")[0].kilos).toBe(0);
+    });
+
+    test("texto ADR", () => {
+        expect(textoAdr(adr)).toBe("ADR UN 3077 cl. 9");
+        expect(textoAdr(normal)).toBe("");
+    });
+
+    test("errores de las líneas", () => {
+        expect(errorLineasEnvio([adr, normal], true, 1)).toBeNull();
+        expect(errorLineasEnvio([{ ...adr, kilos: 0 }], false, 1)).toContain("kilos");
+        expect(errorLineasEnvio([{ ...adr, alto: 0 }], false, 1)).toContain("medidas");
+        expect(errorLineasEnvio([{ ...adr, posicionPale: 2 }], true, 1)).toContain("palé");
+        // Sin palés la posición no cuenta.
+        expect(errorLineasEnvio([{ ...adr, posicionPale: 2 }], false, 1)).toBeNull();
+    });
+
+    test("dirección en la etiqueta como la reparte el servidor", () => {
+        const envio = {
+            ...envioValido(), destTipoVia: "Calle", destVia: "Can Calafat", destNumero: "63",
+            destOtros: "Local 60 Pol Son Oms",
+        };
+        expect(direccionCompletaEnvio(envio)).toBe("Calle Can Calafat 63, Local 60 Pol Son Oms");
+        expect(direccionEnEtiqueta(dachser, envio)).toEqual({
+            lineas: ["Calle Can Calafat 63, Local 60", "Pol Son Oms"], cabe: true,
+        });
+
+        const larga = {
+            ...envio, destVia: "Mar Mediterráneo", destNumero: "1",
+            destOtros: "Entrada por Mar Adriático. P.I. San Fernando de Henares",
+        };
+        expect(direccionEnEtiqueta(dachser, larga)?.cabe).toBe(false);
+        // Agencia que no corta la dirección: no se enseña nada.
+        expect(direccionEnEtiqueta({ ...dachser, direccionEtiqueta: null }, envio)).toBeNull();
+        expect(repartirDireccion("x".repeat(35), 30)).toEqual(["x".repeat(30), "xxxxx"]);
+    });
+
+    test("ida y vuelta de la API", () => {
+        expect(lineaEnvioDesdeApi(lineaEnvioAApi(adr))).toEqual(adr);
+        expect(lineaEnvioAApi(adr).adr?.numero_un).toBe("3077");
+    });
+
+    test("envía líneas y palés", () => {
+        const api = envioAgenciaAApi(
+            { ...envioValido(), agrupadoEnPales: true, tipoPale: "EU", numPales: 2 },
+            { lineas: [adr], conPales: true },
+        );
+        expect(api.pales).toEqual({ tipo: "EU", numero: 2 });
+        expect(api.lineas?.[0].posicion_pale).toBe(1);
+        // Agencia sin palés: no se mandan aunque esté marcado.
+        expect(envioAgenciaAApi({ ...envioValido(), agrupadoEnPales: true }, {}).pales).toBeNull();
     });
 });
