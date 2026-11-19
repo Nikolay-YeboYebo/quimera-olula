@@ -1,5 +1,6 @@
 import { RestAPI } from "@olula/lib/api/rest_api.ts";
 import { criteriaQuery } from "@olula/lib/infraestructura.ts";
+import { NOMBRES_FUNCION_AGENCIA } from "./dominio.ts";
 import {
     AdquirirOrden,
     AlbaranarOrden,
@@ -36,6 +37,7 @@ import {
     DestinatarioEnvio,
     GetAgenciasEnvio,
     GetDatosEnvio,
+    FuncionAgencia,
     GetLineasEnvio,
     GetSeguimientoEnvio,
     GetEtiquetaEnvio,
@@ -691,6 +693,7 @@ interface AgenciaEnvioApi {
     permite_lineas?: boolean;
     tipos_pale?: string[];
     direccion_etiqueta?: { lineas: number; caracteres: number } | null;
+    funciones?: string[];
 }
 
 interface DestinatarioEnvioApi {
@@ -720,6 +723,8 @@ export const agenciaEnvioDesdeApi = (a: AgenciaEnvioApi): AgenciaEnvio => ({
     permiteLineas: a.permite_lineas ?? false,
     tiposPale: a.tipos_pale ?? [],
     direccionEtiqueta: a.direccion_etiqueta ?? null,
+    // Solo las que este frontend sabe hacer.
+    funciones: (a.funciones ?? []).filter((f): f is FuncionAgencia => f in NOMBRES_FUNCION_AGENCIA),
 });
 
 interface MercanciaPeligrosaEnvioApi {

@@ -1,5 +1,5 @@
 import { modeloEsValido } from "@olula/lib/dominio.ts";
-import { AgenciaEnvio, LineaEnvio, NuevoEnvioAgencia, OrdenAlmacen, TipoOrden } from "../diseño.ts";
+import { AgenciaEnvio, FuncionAgencia, LineaEnvio, NuevoEnvioAgencia, OrdenAlmacen, TipoOrden } from "../diseño.ts";
 import {
     albaranesSinEnvio,
     conDatosAlbaran,
@@ -8,6 +8,8 @@ import {
     nuevoEnvioAgenciaInicial,
     ordenPermiteEnvio,
     manifiestoEnviosInicial,
+    agenciasConFunciones,
+    NOMBRES_FUNCION_AGENCIA,
     metaManifiestoEnvios,
     ordenVacia,
     servicioPorDefecto,
@@ -74,7 +76,7 @@ describe("nuevoEnvioAgenciaInicial", () => {
                 codigo: "DACHSER", nombre: "Dachser",
                 servicios: [{ codigo: "Y", descripcion: "targoflex" }], servicioPorDefecto: null,
                 posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto: false,
-                permiteLineas: true, tiposPale: ["EU", "ISO"], direccionEtiqueta: null,
+                permiteLineas: true, tiposPale: ["EU", "ISO"], direccionEtiqueta: null, funciones: [],
             }],
         );
 
@@ -92,12 +94,12 @@ describe("nuevoEnvioAgenciaInicial", () => {
             {
                 codigo: "DACHSER", nombre: "Dachser", servicios: [], servicioPorDefecto: null,
                 posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto: false,
-                permiteLineas: true, tiposPale: ["EU", "ISO"], direccionEtiqueta: null,
+                permiteLineas: true, tiposPale: ["EU", "ISO"], direccionEtiqueta: null, funciones: [],
             },
             {
                 codigo: "CEX", nombre: "Correos Express", servicios: [], servicioPorDefecto: null,
                 posicionesEtiqueta: [], permiteCrearRecogida: true, permiteManifiesto: true,
-                permiteLineas: false, tiposPale: [], direccionEtiqueta: null,
+                permiteLineas: false, tiposPale: [], direccionEtiqueta: null, funciones: [],
             },
         ]);
 
@@ -110,7 +112,7 @@ describe("nuevoEnvioAgenciaInicial", () => {
             codigo: "CEX", nombre: "Correos Express",
             servicios: [{ codigo: "63", descripcion: "Paq24" }, { codigo: "92", descripcion: "Paq Empresa 14" }],
             servicioPorDefecto: "92", posicionesEtiqueta: [], permiteCrearRecogida: true,
-            permiteManifiesto: true, permiteLineas: false, tiposPale: [], direccionEtiqueta: null,
+            permiteManifiesto: true, permiteLineas: false, tiposPale: [], direccionEtiqueta: null, funciones: [],
         }]);
 
         expect(inicial.servicio).toBe("92");
@@ -121,7 +123,7 @@ describe("nuevoEnvioAgenciaInicial", () => {
         const agencia = {
             codigo: "CEX", nombre: "Correos Express", servicios, servicioPorDefecto: "92",
             posicionesEtiqueta: [], permiteCrearRecogida: true, permiteManifiesto: true,
-            permiteLineas: false, tiposPale: [], direccionEtiqueta: null,
+            permiteLineas: false, tiposPale: [], direccionEtiqueta: null, funciones: [],
         };
         expect(servicioPorDefecto(agencia)).toBe("92");
         expect(servicioPorDefecto({ ...agencia, servicioPorDefecto: null })).toBe("63");
@@ -287,21 +289,30 @@ describe("conDatosAlbaran", () => {
     });
 });
 
-describe("manifiesto de envíos", () => {
-    const agencia = (codigo: string, permiteManifiesto: boolean) => ({
+describe("menú de cada agencia y manifiesto", () => {
+    const agencia = (codigo: string, funciones: FuncionAgencia[]): AgenciaEnvio => ({
         codigo, nombre: codigo, servicios: [], servicioPorDefecto: null,
-        posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto,
-        permiteLineas: false, tiposPale: [], direccionEtiqueta: null,
+        posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto: funciones.length > 0,
+        permiteLineas: false, tiposPale: [], direccionEtiqueta: null, funciones,
     });
 
-    test("propone la única agencia con manifiesto y la fecha de hoy", () => {
-        const inicial = manifiestoEnviosInicial([agencia("DACHSER", false), agencia("CEX", true)]);
-        expect(inicial.agenciaId).toBe("CEX");
+    test("solo tienen menú las agencias con alguna función", () => {
+        const agencias = [agencia("DACHSER", ["manifiesto"]), agencia("OTRA", []), agencia("CEX", ["manifiesto"])];
+        expect(agenciasConFunciones(agencias).map((a) => a.codigo)).toEqual(["DACHSER", "CEX"]);
+        expect(NOMBRES_FUNCION_AGENCIA.manifiesto).toBe("Manifiesto diario");
+    });
+
+    test("el manifiesto es de la agencia elegida en su menú, con la fecha de hoy", () => {
+        const inicial = manifiestoEnviosInicial(agencia("DACHSER", ["manifiesto"]));
+        expect(inicial.agenciaId).toBe("DACHSER");
         expect(inicial.fecha.toDateString()).toBe(new Date().toDateString());
     });
 
-    test("con varias agencias con manifiesto no elige ninguna", () => {
-        expect(manifiestoEnviosInicial([agencia("A", true), agencia("B", true)]).agenciaId).toBe("");
+    test("de la API solo se toman las funciones que el frontend sabe hacer", () => {
+        const leida = agenciaEnvioDesdeApi({
+            codigo: "DACHSER", nombre: "Dachser", servicios: [], funciones: ["manifiesto", "otra_futura"],
+        });
+        expect(leida.funciones).toEqual(["manifiesto"]);
     });
 
     test("hace falta agencia y fecha", () => {
@@ -378,7 +389,7 @@ describe("Líneas de mercancía del envío (Dachser)", () => {
         codigo: "DACHSER", nombre: "Dachser", servicios: [], servicioPorDefecto: null,
         posicionesEtiqueta: [], permiteCrearRecogida: false, permiteManifiesto: false,
         permiteLineas: true, tiposPale: ["EU", "ISO", "PAL", "PF", "BX"],
-        direccionEtiqueta: { lineas: 2, caracteres: 30 },
+        direccionEtiqueta: { lineas: 2, caracteres: 30 }, funciones: ["manifiesto"],
     };
 
     test("bultos y kilos de la cabecera como Eneboo", () => {

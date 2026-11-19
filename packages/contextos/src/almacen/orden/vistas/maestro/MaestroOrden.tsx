@@ -10,9 +10,11 @@ import { ClausulaFiltro, Criteria } from "@olula/lib/diseño.ts";
 import { criteriaDefecto } from "@olula/lib/dominio.js";
 import { listaActivaEntidadesInicial } from "@olula/lib/ListaActivaEntidades.js";
 import { getUrlParams, useUrlParams } from "@olula/lib/url-params.js";
-import { useEffect, useMemo } from "react";
-import { ItemOrdenAlmacen } from "../../diseño.ts";
+import { ContextoError } from "@olula/lib/contexto.ts";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { AgenciaEnvio, FuncionAgencia, ItemOrdenAlmacen } from "../../diseño.ts";
 import {
+    agenciasConFunciones,
     ESTADOS_ORDEN_DEFECTO,
     estadosOrdenDesdeFiltro,
     filtroEstadoOrden,
@@ -21,6 +23,8 @@ import {
     ordenAdquirible,
     usuarioActualId,
 } from "../../dominio.ts";
+import { getAgenciasEnvio } from "../../infraestructura.ts";
+import { MenuAgenciaEnvio } from "../agencias/MenuAgenciaEnvio.tsx";
 import { CrearOrden } from "../crear/CrearOrden.tsx";
 import { DetalleOrden } from "../detalle/DetalleOrden.tsx";
 import { ManifiestoEnvios } from "../manifiesto_envios/ManifiestoEnvios.tsx";
@@ -145,6 +149,30 @@ export const MaestroOrden = () => {
     const ordenActiva = ctx.ordenes.lista.find((o) => o.id === ctx.ordenes.activo);
     const puedeAdquirir = !!ordenActiva && ordenAdquirible(ordenActiva, usuarioActualId());
 
+    // Agencias de transporte con funciones fuera de una orden: un menú por cada una.
+    const { intentar } = useContext(ContextoError);
+    const [agenciasMenu, setAgenciasMenu] = useState<AgenciaEnvio[]>([]);
+    const [agenciaManifiesto, setAgenciaManifiesto] = useState<AgenciaEnvio | null>(null);
+
+    useEffect(() => {
+        if (!hayAgenciasEnvio()) return;
+        let vigente = true;
+        intentar(async () => {
+            const agencias = await getAgenciasEnvio();
+            if (vigente) setAgenciasMenu(agenciasConFunciones(agencias));
+        });
+        return () => { vigente = false; };
+    }, [intentar]);
+
+    const elegirFuncionAgencia = (agencia: AgenciaEnvio, funcion: FuncionAgencia) => {
+        switch (funcion) {
+            case "manifiesto":
+                setAgenciaManifiesto(agencia);
+                emitir("manifiesto_solicitado");
+                break;
+        }
+    };
+
     return (
         <div className="OrdenAlmacen">
             <MaestroDetalle<ItemOrdenAlmacen>
@@ -173,11 +201,14 @@ export const MaestroOrden = () => {
                                     >
                                         Adquirir
                                     </QBoton>
-                                    {hayAgenciasEnvio() && (
-                                        <QBoton variante="borde" onClick={() => emitir("manifiesto_solicitado")}>
-                                            Manifiesto de envíos
-                                        </QBoton>
-                                    )}
+                                    {/* Un menú por agencia de transporte con sus funciones (manifiesto...). */}
+                                    {agenciasMenu.map((agencia) => (
+                                        <MenuAgenciaEnvio
+                                            key={agencia.codigo}
+                                            agencia={agencia}
+                                            onFuncion={(funcion) => elegirFuncionAgencia(agencia, funcion)}
+                                        />
+                                    ))}
                                 </div>
                             )}
                             onSeleccion={(payload) =>
@@ -199,8 +230,8 @@ export const MaestroOrden = () => {
             {ctx.estado === "CREANDO" && (
                 <CrearOrden publicar={emitir} />
             )}
-            {ctx.estado === "MANIFIESTO" && (
-                <ManifiestoEnvios publicar={emitir} />
+            {ctx.estado === "MANIFIESTO" && agenciaManifiesto && (
+                <ManifiestoEnvios publicar={emitir} agencia={agenciaManifiesto} />
             )}
         </div>
     );

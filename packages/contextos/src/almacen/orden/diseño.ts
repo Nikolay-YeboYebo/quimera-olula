@@ -241,7 +241,12 @@ export interface AgenciaEnvio {
     tiposPale: string[];
     /** Lo que cabe de la dirección en la etiqueta (Dachser: 2 líneas de 30); null si no la corta. */
     direccionEtiqueta: { lineas: number; caracteres: number } | null;
+    /** Lo que ofrece su menú en la lista de órdenes (funciones que no son de una orden). */
+    funciones: FuncionAgencia[];
 }
+
+/** Funciones de una agencia fuera de una orden concreta (menú de la agencia en la lista de órdenes). */
+export type FuncionAgencia = "manifiesto";
 
 /** Datos ADR (mercancía peligrosa) del artículo de una línea. */
 export interface MercanciaPeligrosaEnvio {

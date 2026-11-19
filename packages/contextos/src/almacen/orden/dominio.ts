@@ -7,6 +7,7 @@ import {
     DatosEnvioAlbaran,
     DestinatarioEnvio,
     DiferenciaPedidoOrden,
+    FuncionAgencia,
     ItemOrdenAlmacen,
     LineaOrdenAlmacen,
     NuevoEnvioAgencia,
@@ -357,8 +358,14 @@ export const conDatosAlbaran = (envio: NuevoEnvioAgencia, datos: DatosEnvioAlbar
     kilos: datos.kilos ?? envio.kilos,
 });
 
-export const agenciasConManifiesto = (agencias: AgenciaEnvio[]): AgenciaEnvio[] =>
-    agencias.filter((a) => a.permiteManifiesto);
+/** Nombre de cada función de agencia en su menú de la lista de órdenes. */
+export const NOMBRES_FUNCION_AGENCIA: Record<FuncionAgencia, string> = {
+    manifiesto: "Manifiesto diario",
+};
+
+/** Las agencias con menú en la lista de órdenes: las que tienen alguna función. */
+export const agenciasConFunciones = (agencias: AgenciaEnvio[]): AgenciaEnvio[] =>
+    agencias.filter((a) => a.funciones.length > 0);
 
 export const metaManifiestoEnvios: MetaModelo<NuevoManifiestoEnvios> = {
     campos: {
@@ -367,14 +374,11 @@ export const metaManifiestoEnvios: MetaModelo<NuevoManifiestoEnvios> = {
     },
 };
 
-/** La agencia, si solo hay una con manifiesto, y la fecha de hoy. */
-export const manifiestoEnviosInicial = (agencias: AgenciaEnvio[]): NuevoManifiestoEnvios => {
-    const conManifiesto = agenciasConManifiesto(agencias);
-    return {
-        agenciaId: conManifiesto.length === 1 ? conManifiesto[0].codigo : "",
-        fecha: new Date(),
-    };
-};
+/** El manifiesto de la agencia elegida en su menú, con la fecha de hoy. */
+export const manifiestoEnviosInicial = (agencia: AgenciaEnvio): NuevoManifiestoEnvios => ({
+    agenciaId: agencia.codigo,
+    fecha: new Date(),
+});
 
 /** El servicio que se propone al elegir la agencia: el suyo por defecto o, si no tiene, el primero. */
 export const servicioPorDefecto = (agencia: AgenciaEnvio | undefined | null): string =>

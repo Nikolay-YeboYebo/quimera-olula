@@ -1,0 +1,39 @@
+/* MenuAgenciaEnvio.css — menú desplegable de una agencia de transporte. */
+
+.menu-agencia-envio {
+    position: relative;
+    display: inline-block;
+
+    .menu-agencia-envio__opciones {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 20;
+        min-width: 100%;
+        margin: 2px 0 0;
+        padding: var(--espaciado-xs, 4px) 0;
+        list-style: none;
+        background: var(--color-fondo, #fff);
+        border: 1px solid var(--color-borde-sutil);
+        border-radius: 4px;
+        box-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+        white-space: nowrap;
+
+        button {
+            display: block;
+            width: 100%;
+            padding: var(--espaciado-s) var(--espaciado-m);
+            border: none;
+            background: none;
+            text-align: left;
+            font: inherit;
+            color: inherit;
+            cursor: pointer;
+
+            &:hover,
+            &:focus-visible {
+                background: var(--color-fondo-secundario, #f2f2f2);
+            }
+        }
+    }
+}
