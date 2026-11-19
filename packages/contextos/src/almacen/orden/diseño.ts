@@ -186,6 +186,8 @@ export type AlbaranGenerado = {
     permiteConfirmarEnvio?: boolean;
     /** Si se puede pedir a la agencia que anule el envío. */
     permiteAnularEnvio?: boolean;
+    /** Página pública de seguimiento de la agencia (agenciastrans.urlsegui). */
+    urlSeguimiento?: string;
 };
 /** Genera los albaranes de una SALIDA PREPARADA y la termina; devuelve los albaranes generados. */
 export type AlbaranarOrden = (id: string) => Promise<AlbaranGenerado[]>;
@@ -368,6 +370,8 @@ export interface SeguimientoEnvio {
     recogida: { numero: string; situaciones: PasoSeguimientoEnvio[] } | null;
     /** Lo que la agencia no ha podido dar (p. ej. el envío sí y la recogida no). */
     errores: string[];
+    /** Página pública de seguimiento de la agencia, si la tiene. */
+    urlSeguimiento: string | null;
 }
 
 export type GetSeguimientoEnvio = (albaranId: string) => Promise<SeguimientoEnvio>;

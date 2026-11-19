@@ -96,6 +96,7 @@ interface AlbaranOrdenApi {
     recogida?: { numero: string; estado: string | null } | null;
     permite_confirmar_envio?: boolean;
     permite_anular_envio?: boolean;
+    url_seguimiento?: string | null;
 }
 
 interface LecturaLineaOrdenApi {
@@ -199,6 +200,7 @@ const albaranOrdenDesdeApi = (api: AlbaranOrdenApi) => ({
             permiteAnularEnvio: api.permite_anular_envio ?? false,
         }
         : {}),
+    ...(api.numero_tracking && api.url_seguimiento ? { urlSeguimiento: api.url_seguimiento } : {}),
 });
 
 export const ordenDesdeApi = (api: OrdenAlmacenApi): OrdenAlmacen => ({
@@ -881,6 +883,7 @@ interface SeguimientoEnvioApi {
     estados: PasoSeguimientoEnvioApi[];
     recogida: { numero: string; situaciones: PasoSeguimientoEnvioApi[] } | null;
     errores: string[];
+    url_seguimiento?: string | null;
 }
 
 const pasoSeguimientoDesdeApi = (p: PasoSeguimientoEnvioApi): PasoSeguimientoEnvio => ({
@@ -898,6 +901,7 @@ export const seguimientoEnvioDesdeApi = (s: SeguimientoEnvioApi): SeguimientoEnv
         ? { numero: s.recogida.numero, situaciones: (s.recogida.situaciones ?? []).map(pasoSeguimientoDesdeApi) }
         : null,
     errores: s.errores ?? [],
+    urlSeguimiento: s.url_seguimiento ?? null,
 });
 
 export const getSeguimientoEnvio: GetSeguimientoEnvio = async (albaranId) => {

@@ -235,6 +235,7 @@ describe("infraestructura del envío por agencia", () => {
                     id: 4, codigo: "A4", agencia_envio: "DACHSER", numero_tracking: "4947374462",
                     estado_envio: "Etiqueta generada",
                     permite_confirmar_envio: true, permite_anular_envio: true,
+                    url_seguimiento: "https://elogistics.dachser.com/shpdl/?l=ES&c=10&n=4947374462",
                 },
             ],
         };
@@ -255,6 +256,7 @@ describe("infraestructura del envío por agencia", () => {
                 id: "4", codigo: "A4", agenciaEnvio: "DACHSER", numeroTracking: "4947374462",
                 estadoEnvio: "Etiqueta generada",
                 permiteConfirmarEnvio: true, permiteAnularEnvio: true,
+                urlSeguimiento: "https://elogistics.dachser.com/shpdl/?l=ES&c=10&n=4947374462",
             },
         ]);
     });
@@ -323,6 +325,7 @@ describe("Seguimiento del envío", () => {
             ],
         },
         errores: [],
+        url_seguimiento: "https://s.correosexpress.com/search?s=2630002513427878",
     };
 
     it("lee estados y recogida de la API", () => {
@@ -333,6 +336,7 @@ describe("Seguimiento del envío", () => {
         expect(s.recogida?.numero).toBe("100292500");
         expect(s.recogida?.situaciones[1].momento).toBeNull();
         expect(s.recogida?.situaciones[1].incidencia).toBe("Sin motivo");
+        expect(s.urlSeguimiento).toBe("https://s.correosexpress.com/search?s=2630002513427878");
     });
 
     it("sin recogida", () => {

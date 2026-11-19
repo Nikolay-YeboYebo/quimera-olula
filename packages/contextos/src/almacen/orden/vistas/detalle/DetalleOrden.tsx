@@ -233,13 +233,23 @@ export const DetalleOrden = ({
                             <span>{modelo.albaranes.length === 1 ? "Albarán" : "Albaranes"}</span>
                             {modelo.albaranes.map(({
                                 id, codigo, agenciaEnvio, numeroTracking, estadoEnvio, recogida,
-                                permiteConfirmarEnvio, permiteAnularEnvio,
+                                permiteConfirmarEnvio, permiteAnularEnvio, urlSeguimiento,
                             }) => (
                                 <span key={id} className="DetalleOrden__albaran">
                                     <Link to={`/ventas/albaran?id=${id}`}>{codigo}</Link>
                                     {numeroTracking && (
                                         <>
-                                            <span>{agenciaEnvio} {numeroTracking}</span>
+                                            <span>
+                                                {agenciaEnvio}{" "}
+                                                {urlSeguimiento
+                                                    ? (
+                                                        <a href={urlSeguimiento} target="_blank" rel="noreferrer"
+                                                            title="Seguimiento en la web de la agencia">
+                                                            {numeroTracking}
+                                                        </a>
+                                                    )
+                                                    : numeroTracking}
+                                            </span>
                                             {estadoEnvio && (
                                                 <span className="DetalleOrden__estado-envio">{estadoEnvio}</span>
                                             )}

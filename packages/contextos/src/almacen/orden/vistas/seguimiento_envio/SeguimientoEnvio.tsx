@@ -43,7 +43,17 @@ export const SeguimientoEnvioAlbaran = ({
                     <p>Consultando a la agencia…</p>
                 ) : (
                     <>
-                        <p>{seguimiento.agencia} · Envío {seguimiento.numeroTracking}</p>
+                        <p>
+                            {seguimiento.agencia} · Envío {seguimiento.numeroTracking}
+                            {seguimiento.urlSeguimiento && (
+                                <>
+                                    {" · "}
+                                    <a href={seguimiento.urlSeguimiento} target="_blank" rel="noreferrer">
+                                        Ver en la web de {seguimiento.agencia}
+                                    </a>
+                                </>
+                            )}
+                        </p>
                         <TablaPasos
                             titulo="Envío"
                             pasos={seguimiento.estados}
