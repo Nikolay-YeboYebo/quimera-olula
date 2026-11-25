@@ -1,6 +1,6 @@
 import { QInput } from "@olula/componentes/index.js";
 import { LineaEnvio } from "../../diseño.ts";
-import { CampoLineaEnvio, cambiarLineaEnvio, textoAdr } from "../../dominio.ts";
+import { CampoLineaEnvio, LONGITUD_CONTENIDO_LINEA_ENVIO, cambiarLineaEnvio, textoAdr } from "../../dominio.ts";
 
 /**
  * Tabla de líneas de mercancía del envío, como la del envío Dachser de Eneboo
@@ -18,13 +18,14 @@ export const LineasEnvio = ({
     enPales: boolean;
     onCambiar: (lineas: LineaEnvio[]) => void;
 }) => {
-    const celda = (indice: number, campo: CampoLineaEnvio, tipo?: "numero") => (
+    const celda = (indice: number, campo: CampoLineaEnvio, tipo?: "numero", maxLength?: number) => (
         <td className={`lineas-envio__${campo}`}>
             <QInput
                 label=""
                 nombre={`${campo}-${indice}`}
                 condensado
                 tipo={tipo}
+                maxLength={maxLength}
                 valor={String(lineas[indice][campo])}
                 onChange={(valor: string) => onCambiar(cambiarLineaEnvio(lineas, indice, campo, valor))}
             />
@@ -52,7 +53,7 @@ export const LineasEnvio = ({
             <tbody>
                 {lineas.map((linea, i) => (
                     <tr key={i}>
-                        {celda(i, "contenido")}
+                        {celda(i, "contenido", undefined, LONGITUD_CONTENIDO_LINEA_ENVIO)}
                         <td className="lineas-envio__adr" title={linea.adr?.sustancia ?? ""}>{textoAdr(linea)}</td>
                         {enPales && celda(i, "posicionPale", "numero")}
                         {celda(i, "etiquetas", "numero")}

@@ -450,6 +450,10 @@ export const descripcionEnvio = (lineas: LineaEnvio[]): string =>
         ? "Productos químicos, pinturas y adhesivos"
         : "Envío normal sin ADR";
 
+/** Caracteres de `contenido` que llegan a la agencia: Dachser corta a 20
+ * (LONGITUD_CONTENIDO en transporte_dachser/.../lineas.py). */
+export const LONGITUD_CONTENIDO_LINEA_ENVIO = 20;
+
 export type CampoLineaEnvio = "contenido" | "etiquetas" | "bultos" | "embalaje" | "largo" | "ancho"
     | "alto" | "kilos" | "posicionPale";
 

@@ -176,19 +176,20 @@
         min-width: 0;
     }
 
-    .lineas-envio__contenido quimera-input {
-        width: 100%;
-        min-width: 8rem;
+    /*
+     * Las excepciones llevan `td.` para pesar más que la regla de arriba (un
+     * selector de atributo cuenta como una clase): sin él se quedaban en 4rem.
+     * Contenido: lo justo para los 20 caracteres que admite Dachser
+     * (LONGITUD_CONTENIDO_LINEA_ENVIO) más el relleno del campo.
+     */
+    td.lineas-envio__contenido quimera-input {
+        width: calc(20ch + 1rem);
     }
 
-    .lineas-envio__embalaje quimera-input,
-    .lineas-envio__posicionPale quimera-input,
-    .lineas-envio__etiquetas quimera-input {
+    td.lineas-envio__embalaje quimera-input,
+    td.lineas-envio__posicionPale quimera-input,
+    td.lineas-envio__etiquetas quimera-input {
         width: 3rem;
-    }
-
-    .lineas-envio__adr quimera-input {
-        width: auto;
     }
 }
 
